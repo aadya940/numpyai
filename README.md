@@ -20,3 +20,7 @@ print(
     )
 )  # Should return 3.0
 ```
+
+### Supported LLM Vendors
+
+- Google Gemini
