@@ -25,6 +25,14 @@ class array:
         self.MAX_TRIES = 3
 
         self._output_metadata = {}
+    
+    def get_array(self):
+        """Returns the underlying Numpy Array of the `numpyai.array` class."""
+        return self._data
+
+    def set_array(self, new_array):
+        """Sets the underly Numpy Array to `new_array`."""
+        self._data = new_array
 
     def _collect_metadata(self, data):
         """Collect comprehensive metadata about the NumPy array."""
