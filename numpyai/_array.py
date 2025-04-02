@@ -1,6 +1,12 @@
+# Import necessary libraries
+from rich.console import Console
+from rich.panel import Panel
+from rich.syntax import Syntax
+from rich.table import Table
+from rich.text import Text
+from rich import box
 import numpy as np
 import re
-from rich.console import Console
 from typing import Any, Dict, List, Optional, Union, Tuple
 
 from ._validator import NumpyValidator
@@ -8,9 +14,12 @@ from ._ai import NumpyCodeGen
 from ._utils import NumpyMetadataCollector
 from ._exceptions import NumpyAIError
 
-c = Console()
+# Initialize rich console
+console = Console()
 
-c.log("Ensure your API KEY is set for your LLM as an environment variable.")
+console.print(
+    "[yellow]Ensure your API KEY is set for your LLM as an environment variable.[/yellow]"
+)
 
 
 class array:
@@ -254,18 +263,29 @@ class array:
         """Handles user queries by generating and executing NumPy code."""
         assert isinstance(query, str)
 
+        console.print(
+            Panel(f"[bold cyan]Query:[/bold cyan] {query}", border_style="blue")
+        )
+
         tries = 0
         error_messages = []
 
         while tries < self.MAX_TRIES:
+            console.print(
+                f"[bold green]Attempt {tries+1}/{self.MAX_TRIES}...[/bold green]"
+            )
             self.current_prompt = query
             try:
                 _code = self.generate_numpy_code(query)
                 if isinstance(_code, str):
+                    console.print("[bold]Executing generated code...[/bold]")
                     _res = self.execute_numpy_code(_code, self._data)
                     if _res is None:
                         error_messages.append(
                             f"Try {tries+1}: Code execution returned None"
+                        )
+                        console.print(
+                            f"[bold red]✗[/bold red] Attempt {tries+1} failed: Code execution returned None"
                         )
                         tries += 1
                         continue
@@ -284,10 +304,17 @@ class array:
                     )
                     _testing_code = re.sub(r"```(\w+)?", "", _testing_code).strip()
 
-                    c.log(
-                        f"""The following code will be executed as validation/test:
-                        {_testing_code}
-                    """
+                    console.print(
+                        Panel(
+                            Syntax(
+                                _testing_code,
+                                "python",
+                                theme="monokai",
+                                line_numbers=True,
+                            ),
+                            title="[bold]Validation Code[/bold]",
+                            border_style="green",
+                        )
                     )
 
                     _test_args = {"arr": self._data, "code_out": _res}
@@ -297,6 +324,9 @@ class array:
                     if _test_response is not None:
                         if isinstance(_test_response, bool):
                             if _test_response:
+                                console.print(
+                                    "[bold green]✓[/bold green] Validation successful!"
+                                )
                                 if isinstance(_res, np.ndarray):
                                     return _res
                                 return _res
@@ -304,12 +334,18 @@ class array:
                             # Handle array truth value - use all() or any() based on your validation needs
                             if _test_response.size == 1:
                                 if bool(_test_response.item()):
+                                    console.print(
+                                        "[bold green]✓[/bold green] Validation successful!"
+                                    )
                                     if isinstance(_res, np.ndarray):
                                         return _res
                                     return _res
                             elif (
                                 _test_response.all()
                             ):  # or .any() depending on validation requirements
+                                console.print(
+                                    "[bold green]✓[/bold green] Validation successful!"
+                                )
                                 if isinstance(_res, np.ndarray):
                                     return _res
                                 return _res
@@ -317,6 +353,9 @@ class array:
                             # For other non-None return types, evaluate as boolean
                             try:
                                 if bool(_test_response):
+                                    console.print(
+                                        "[bold green]✓[/bold green] Validation successful!"
+                                    )
                                     if isinstance(_res, np.ndarray):
                                         return _res
                                     return _res
@@ -325,15 +364,29 @@ class array:
                                 error_messages.append(
                                     f"Try {tries+1}: Validation failed - couldn't convert test response to boolean"
                                 )
+                                console.print(
+                                    f"[bold red]✗[/bold red] Validation failed - couldn't convert test response to boolean"
+                                )
             except Exception as e:
                 error_messages.append(f"Try {tries+1}: {str(e)}")
+                console.print(
+                    f"[bold red]✗[/bold red] Attempt {tries+1} failed: {str(e)}"
+                )
 
             tries += 1
 
         # More detailed error message with history of what went wrong
+        error_table = Table(title="Error Details", box=box.DOUBLE_EDGE)
+        error_table.add_column("Attempt", style="cyan")
+        error_table.add_column("Error", style="red")
+
+        for i, msg in enumerate(error_messages):
+            error_table.add_row(f"{i+1}", msg)
+
+        console.print(error_table)
+
         raise NumpyAIError(
-            f"Failed to generate correct response after {self.MAX_TRIES} attempts. "
-            f"Error details: {'; '.join(error_messages)}"
+            f"[bold red]Failed to generate correct response after {self.MAX_TRIES} attempts.[/bold red]"
         )
 
     def generate_numpy_code(self, query):
@@ -342,12 +395,18 @@ class array:
             query=query, metadata=self.metadata
         )
         llm_res = self._code_generator.generate_response(pr)
-        c.log(f"llm response is: \n {llm_res}")
+
+        syntax = Syntax(llm_res, "python", theme="monokai", line_numbers=True)
+        console.print(
+            Panel(syntax, title="[bold]Generated Code[/bold]", border_style="blue")
+        )
+
         return self.assert_is_code(llm_res)
 
     def assert_is_code(self, llm_response):
         """Ensure LLM response is valid Python/NumPy code."""
         if not isinstance(llm_response, str):
+            console.print("[bold red]✗[/bold red] LLM response is not a string")
             raise ValueError("LLM response is not a string")
 
         tries = 0
@@ -357,11 +416,12 @@ class array:
             code = re.sub(r"```(\w+)?", "", llm_response).strip()
             try:
                 if self._validator.validate_code(code):
-                    c.log(f"The following code will be executed:\n {code}")
                     return code
             except SyntaxError as e:
                 error_messages.append(f"Syntax error: {str(e)}")
                 tries += 1
+                console.print(f"[bold red]✗[/bold red] Syntax error: {str(e)}")
+                console.print("[yellow]Regenerating code...[/yellow]")
                 llm_response = self._code_generator.generate_response(
                     self.current_prompt
                 )
@@ -369,9 +429,17 @@ class array:
 
             tries += 1
 
+        error_table = Table(title="Code Validation Errors", box=box.SIMPLE)
+        error_table.add_column("Attempt", style="cyan")
+        error_table.add_column("Error", style="red")
+
+        for i, msg in enumerate(error_messages):
+            error_table.add_row(f"{i+1}", msg)
+
+        console.print(error_table)
+
         raise NumpyAIError(
-            f"Error generating valid code after {self.MAX_TRIES} attempts. "
-            f"Error details: {'; '.join(error_messages)}"
+            f"[bold red]Error generating valid code after {self.MAX_TRIES} attempts.[/bold red]"
         )
 
     def execute_numpy_code(self, code, args):
@@ -391,8 +459,12 @@ class array:
 
             # Execute the code block
             exec(code, {"__builtins__": __builtins__}, local_vars)
-            return local_vars.get("output")
+            result = local_vars.get("output")
+
+            if result is not None:
+                console.print("\n".join(str(result).split("\n")[:10]))
+            return result
 
         except Exception as e:
-            c.log(f"Error executing code: {str(e)}")
+            console.print(f"[bold red]✗[/bold red] Error executing code: {str(e)}")
             return None
