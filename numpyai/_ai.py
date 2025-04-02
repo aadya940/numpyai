@@ -16,8 +16,6 @@ class NumpyCodeGen:
         else:
             self._model_name = model_name
 
-        c.log("Ensure your API KEY is set for your LLM as an environment variable.")
-
         self._system_prompt = (
             "You are a coding assistant who generates only NumPy and Python code."
         )

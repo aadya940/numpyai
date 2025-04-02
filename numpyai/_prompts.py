@@ -52,7 +52,8 @@ def validate_llm_output(query, metadata, output_metadata):
     7. Set a variable called 'output' to True if validation passes, else False.
     8. DO NOT use 'return' statements - assign the result to 'output' variable.
     9. Allow numerical tolerance (rtol=1e-5) where appropriate.
-
+    10. If the query is not verifiable, do simple type checking as test.
+    
 
     The array has these properties:
     {metadata}
