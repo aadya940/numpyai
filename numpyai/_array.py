@@ -152,102 +152,19 @@ class array:
     def __repr__(self):
         return f"numpyai.array({repr(self._data.shape)})"
 
-    # Common NumPy functions
-    def sum(self, axis=None, keepdims=False):
-        """Sum of array elements over a given axis."""
-        result = self._data.sum(axis=axis, keepdims=keepdims)
-        if isinstance(result, np.ndarray):
-            return array(result)
-        return result
+    def __getattr__(self, name):
+        """Implements numpy methods using method forwarding."""
+        attr = getattr(self._data, name)
+        if callable(attr):
+            # Wrap it in a function to allow forwarding kwargs
+            def method_proxy(*args, **kwargs):
+                result = attr(*args, **kwargs)
+                if isinstance(result, np.ndarray):
+                    return array(result)
+                return result
 
-    def mean(self, axis=None, keepdims=False):
-        """Mean of array elements over a given axis."""
-        result = self._data.mean(axis=axis, keepdims=keepdims)
-        if isinstance(result, np.ndarray):
-            return array(result)
-        return result
-
-    def std(self, axis=None, keepdims=False):
-        """Standard deviation of array elements over a given axis."""
-        result = self._data.std(axis=axis, keepdims=keepdims)
-        if isinstance(result, np.ndarray):
-            return array(result)
-        return result
-
-    def min(self, axis=None, keepdims=False):
-        """Minimum of array elements over a given axis."""
-        result = self._data.min(axis=axis, keepdims=keepdims)
-        if isinstance(result, np.ndarray):
-            return array(result)
-        return result
-
-    def max(self, axis=None, keepdims=False):
-        """Maximum of array elements over a given axis."""
-        result = self._data.max(axis=axis, keepdims=keepdims)
-        if isinstance(result, np.ndarray):
-            return array(result)
-        return result
-
-    def argmin(self, axis=None):
-        """Indices of minimum values along an axis."""
-        result = self._data.argmin(axis=axis)
-        if isinstance(result, np.ndarray):
-            return array(result)
-        return result
-
-    def argmax(self, axis=None):
-        """Indices of maximum values along an axis."""
-        result = self._data.argmax(axis=axis)
-        if isinstance(result, np.ndarray):
-            return array(result)
-        return result
-
-    def clip(self, min=None, max=None):
-        """Clip (limit) the values in the array."""
-        result = self._data.clip(min=min, max=max)
-        return array(result)
-
-    def round(self, decimals=0):
-        """Round array to the given number of decimals."""
-        result = np.round(self._data, decimals=decimals)
-        return array(result)
-
-    def reshape(self, *shape):
-        """Reshape the array."""
-        result = self._data.reshape(*shape)
-        return array(result)
-
-    def transpose(self, *axes):
-        """Transpose the array."""
-        result = self._data.transpose(*axes)
-        return array(result)
-
-    # Properties
-    @property
-    def T(self):
-        """Return the transpose of the array."""
-        result = self._data.T
-        return array(result)
-
-    @property
-    def shape(self):
-        """Return the shape of the array."""
-        return self._data.shape
-
-    @property
-    def ndim(self):
-        """Return the number of dimensions of the array."""
-        return self._data.ndim
-
-    @property
-    def size(self):
-        """Return the size of the array."""
-        return self._data.size
-
-    @property
-    def dtype(self):
-        """Return the data type of the array."""
-        return self._data.dtype
+            return method_proxy
+        return attr  # Return as-is if it's not callable
 
     # Utility methods
     def get_array(self):
