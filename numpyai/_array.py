@@ -5,8 +5,7 @@ from typing import Any, Dict, List, Optional, Union, Tuple
 
 from ._validator import NumpyValidator
 from ._ai import NumpyCodeGen
-from ._utils import collect_metadata, collect_output_metadata
-from ._prompts import numpy_single_array_llm_prompt, validate_llm_output
+from ._utils import NumpyMetadataCollector
 from ._exceptions import NumpyAIError
 
 c = Console()
@@ -15,27 +14,22 @@ c.log("Ensure your API KEY is set for your LLM as an environment variable.")
 
 
 class array:
-    """A wrapper around `numpy.ndarray` providing AI-powered functionalities, 
-    history tracking, and extended operations.
+    """A wrapper around `numpy.ndarray` providing AI-powered functionalities
+    and extended operations.
     """
+
     def __init__(self, data):
         assert isinstance(data, np.ndarray)
         self._data = data
-
-        self.metadata = self._collect_metadata(self._data)
-        self.current_prompt = None
+        self._metadata_collector = NumpyMetadataCollector()
         self._validator = NumpyValidator()
         self._code_generator = NumpyCodeGen()
         self.MAX_TRIES = 3
 
         self._output_metadata = {}
 
-        # Operation history for undo functionality
-        self._history = [
-            np.array(data).copy()
-        ]  # Initialize with a copy of initial data
-        self._history_index = 0  # Start at the first element
-        self._max_history = 50  # Maximum number of operations to store
+        self.current_prompt = None
+        self.metadata = self._metadata_collector.metadata(self._data)
 
     # Basic operators with scalar support
     def __add__(self, other):
@@ -43,133 +37,77 @@ class array:
             result = self._data + other._data
         else:
             result = self._data + other
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __radd__(self, other):
         result = other + self._data
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __sub__(self, other):
         if isinstance(other, array):
             result = self._data - other._data
         else:
             result = self._data - other
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __rsub__(self, other):
         result = other - self._data
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __mul__(self, other):
         if isinstance(other, array):
             result = self._data * other._data
         else:
             result = self._data * other
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __rmul__(self, other):
         result = other * self._data
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __truediv__(self, other):
         if isinstance(other, array):
             result = self._data / other._data
         else:
             result = self._data / other
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __rtruediv__(self, other):
         result = other / self._data
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __floordiv__(self, other):
         if isinstance(other, array):
             result = self._data // other._data
         else:
             result = self._data // other
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __rfloordiv__(self, other):
         result = other // self._data
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __pow__(self, other):
         if isinstance(other, array):
             result = self._data**other._data
         else:
             result = self._data**other
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __rpow__(self, other):
         result = other**self._data
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __mod__(self, other):
         if isinstance(other, array):
             result = self._data % other._data
         else:
             result = self._data % other
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __rmod__(self, other):
         result = other % self._data
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __matmul__(self, other):
         """Matrix multiplication using @ operator."""
@@ -177,184 +115,110 @@ class array:
             result = self._data @ other._data
         else:
             result = self._data @ other
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __rmatmul__(self, other):
         result = other @ self._data
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __neg__(self):
         result = -self._data
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __pos__(self):
         result = +self._data
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __abs__(self):
         result = abs(self._data)
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __getitem__(self, index):
         result = self._data[index]
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def __setitem__(self, index, value):
-        old_data = self._data.copy()
         self._data[index] = value
-        self._add_to_history(old_data)  # Store the previous state
 
     def __repr__(self):
-        return f"numpyai.array({repr(self._data)})"
+        return f"numpyai.array({repr(self._data.shape)})"
 
     # Common NumPy functions
     def sum(self, axis=None, keepdims=False):
         """Sum of array elements over a given axis."""
         result = self._data.sum(axis=axis, keepdims=keepdims)
         if isinstance(result, np.ndarray):
-            new_arr = array(result)
-            new_arr._history = self._history.copy()
-            new_arr._history_index = self._history_index
-            new_arr._add_to_history(result)
-            return new_arr
+            return array(result)
         return result
 
     def mean(self, axis=None, keepdims=False):
         """Mean of array elements over a given axis."""
         result = self._data.mean(axis=axis, keepdims=keepdims)
         if isinstance(result, np.ndarray):
-            new_arr = array(result)
-            new_arr._history = self._history.copy()
-            new_arr._history_index = self._history_index
-            new_arr._add_to_history(result)
-            return new_arr
+            return array(result)
         return result
 
     def std(self, axis=None, keepdims=False):
         """Standard deviation of array elements over a given axis."""
         result = self._data.std(axis=axis, keepdims=keepdims)
         if isinstance(result, np.ndarray):
-            new_arr = array(result)
-            new_arr._history = self._history.copy()
-            new_arr._history_index = self._history_index
-            new_arr._add_to_history(result)
-            return new_arr
+            return array(result)
         return result
 
     def min(self, axis=None, keepdims=False):
         """Minimum of array elements over a given axis."""
         result = self._data.min(axis=axis, keepdims=keepdims)
         if isinstance(result, np.ndarray):
-            new_arr = array(result)
-            new_arr._history = self._history.copy()
-            new_arr._history_index = self._history_index
-            new_arr._add_to_history(result)
-            return new_arr
+            return array(result)
         return result
 
     def max(self, axis=None, keepdims=False):
         """Maximum of array elements over a given axis."""
         result = self._data.max(axis=axis, keepdims=keepdims)
         if isinstance(result, np.ndarray):
-            new_arr = array(result)
-            new_arr._history = self._history.copy()
-            new_arr._history_index = self._history_index
-            new_arr._add_to_history(result)
-            return new_arr
+            return array(result)
         return result
 
     def argmin(self, axis=None):
         """Indices of minimum values along an axis."""
         result = self._data.argmin(axis=axis)
         if isinstance(result, np.ndarray):
-            new_arr = array(result)
-            new_arr._history = self._history.copy()
-            new_arr._history_index = self._history_index
-            new_arr._add_to_history(result)
-            return new_arr
+            return array(result)
         return result
 
     def argmax(self, axis=None):
         """Indices of maximum values along an axis."""
         result = self._data.argmax(axis=axis)
         if isinstance(result, np.ndarray):
-            new_arr = array(result)
-            new_arr._history = self._history.copy()
-            new_arr._history_index = self._history_index
-            new_arr._add_to_history(result)
-            return new_arr
+            return array(result)
         return result
 
     def clip(self, min=None, max=None):
         """Clip (limit) the values in the array."""
         result = self._data.clip(min=min, max=max)
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def round(self, decimals=0):
         """Round array to the given number of decimals."""
         result = np.round(self._data, decimals=decimals)
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def reshape(self, *shape):
         """Reshape the array."""
         result = self._data.reshape(*shape)
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     def transpose(self, *axes):
         """Transpose the array."""
         result = self._data.transpose(*axes)
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     # Properties
     @property
     def T(self):
         """Return the transpose of the array."""
         result = self._data.T
-        new_arr = array(result)
-        new_arr._history = self._history.copy()
-        new_arr._history_index = self._history_index
-        new_arr._add_to_history(result)
-        return new_arr
+        return array(result)
 
     @property
     def shape(self):
@@ -383,70 +247,8 @@ class array:
 
     def set_array(self, new_array):
         """Sets the underlying Numpy Array to `new_array`."""
-        self._add_to_history(self._data)  # Store the previous state
         self._data = new_array
-
-    # History management methods
-    def _add_to_history(self, result):
-        """Add an operation result to history."""
-        # Remove any future history if we're in the middle of the history
-        if self._history_index < len(self._history) - 1:
-            self._history = self._history[: self._history_index + 1]
-
-        # Add current state to history
-        self._history.append(np.array(result).copy())
-        self._history_index = len(self._history) - 1
-
-        # Trim history if it exceeds max_history
-        if len(self._history) > self._max_history:
-            self._history = self._history[-self._max_history :]
-            self._history_index = len(self._history) - 1
-
-    def undo(self):
-        """Restore the previous state of the array."""
-        if self._history_index > 0:
-            self._history_index -= 1
-            self._data = self._history[self._history_index].copy()
-            return self
-        else:
-            raise IndexError("No operations to undo.")
-
-    def redo(self):
-        """Redo the last undone operation."""
-        if self._history_index < len(self._history) - 1:
-            self._history_index += 1
-            self._data = self._history[self._history_index].copy()
-            return self
-        else:
-            raise IndexError("No operations to redo.")
-
-    def history_size(self):
-        """Return the number of operations in history."""
-        return len(self._history)
-
-    def clear_history(self):
-        """Clear operation history except current state."""
-        current_state = self._data.copy()
-        self._history = [current_state]
-        self._history_index = 0
-
-    def set_max_history(self, size):
-        """Set the maximum number of operations to store in history."""
-        if size < 1:
-            raise ValueError("History size must be at least 1")
-        self._max_history = size
-        if len(self._history) > size:
-            # Keep the current state and trim history
-            self._history = self._history[-size:]
-            self._history_index = len(self._history) - 1
-
-    def _collect_metadata(self, data):
-        """Collect comprehensive metadata about the NumPy array."""
-        return collect_metadata(data=data)
-
-    def _collect_output_metadata(self, output):
-        """Collect comprehensive metadata about the Output NumPy array."""
-        return collect_output_metadata(output=output)
+        self.metadata = self._metadata_collector.metadata(self._data)
 
     def chat(self, query):
         """Handles user queries by generating and executing NumPy code."""
@@ -459,7 +261,6 @@ class array:
             self.current_prompt = query
             try:
                 _code = self.generate_numpy_code(query)
-
                 if isinstance(_code, str):
                     _res = self.execute_numpy_code(_code, self._data)
                     if _res is None:
@@ -469,14 +270,18 @@ class array:
                         tries += 1
                         continue
 
-                    self._output_metadata = self._collect_output_metadata(_res)
+                    self._output_metadata = (
+                        self._metadata_collector.collect_output_metadata(_res)
+                    )
                     # Generate and run test code
-                    _testing_prompt = validate_llm_output(
+                    _testing_prompt = self._validator.generate_validation_prompt(
                         query=query,
                         metadata=self.metadata,
                         output_metadata=self._output_metadata,
                     )
-                    _testing_code = self.generate_llm_response(_testing_prompt)
+                    _testing_code = self._code_generator.generate_response(
+                        _testing_prompt
+                    )
                     _testing_code = re.sub(r"```(\w+)?", "", _testing_code).strip()
 
                     c.log(
@@ -492,9 +297,7 @@ class array:
                     if _test_response is not None:
                         if isinstance(_test_response, bool):
                             if _test_response:
-                                # Add result to history if it's an ndarray
                                 if isinstance(_res, np.ndarray):
-                                    self._add_to_history(_res)
                                     return _res
                                 return _res
                         elif isinstance(_test_response, np.ndarray):
@@ -502,14 +305,12 @@ class array:
                             if _test_response.size == 1:
                                 if bool(_test_response.item()):
                                     if isinstance(_res, np.ndarray):
-                                        self._add_to_history(_res)
                                         return _res
                                     return _res
                             elif (
                                 _test_response.all()
                             ):  # or .any() depending on validation requirements
                                 if isinstance(_res, np.ndarray):
-                                    self._add_to_history(_res)
                                     return _res
                                 return _res
                         else:
@@ -517,7 +318,6 @@ class array:
                             try:
                                 if bool(_test_response):
                                     if isinstance(_res, np.ndarray):
-                                        self._add_to_history(_res)
                                         return _res
                                     return _res
                             except (ValueError, TypeError):
@@ -538,14 +338,12 @@ class array:
 
     def generate_numpy_code(self, query):
         """Generate valid NumPy code from the query."""
-        pr = self.generate_numpy_prompt(query)
-        llm_res = self.generate_llm_response(pr)
+        pr = self._code_generator.generate_llm_prompt(
+            query=query, metadata=self.metadata
+        )
+        llm_res = self._code_generator.generate_response(pr)
         c.log(f"llm response is: \n {llm_res}")
         return self.assert_is_code(llm_res)
-
-    def generate_llm_response(self, prompt):
-        """Get LLM-generated response."""
-        return self._code_generator.generate_response(prompt)
 
     def assert_is_code(self, llm_response):
         """Ensure LLM response is valid Python/NumPy code."""
@@ -564,7 +362,9 @@ class array:
             except SyntaxError as e:
                 error_messages.append(f"Syntax error: {str(e)}")
                 tries += 1
-                llm_response = self.generate_llm_response(self.current_prompt)
+                llm_response = self._code_generator.generate_response(
+                    self.current_prompt
+                )
                 continue
 
             tries += 1
@@ -596,7 +396,3 @@ class array:
         except Exception as e:
             c.log(f"Error executing code: {str(e)}")
             return None
-
-    def generate_numpy_prompt(self, query):
-        """Format the user query into a prompt for code generation."""
-        return numpy_single_array_llm_prompt(query=query, metadata=self.metadata)

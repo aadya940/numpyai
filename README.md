@@ -8,8 +8,6 @@ NumpyAI enables seamless interaction with NumPy using natural language queries, 
 - **Natural Language Processing**: Convert plain language instructions into executable NumPy code.
 - **Validation & Safety**: Automatically validates and tests generated code for correctness and security.
 - **Transparency**: Logs all generated code and applies checks to ensure accuracy before execution.
-- **History Tracking**: Keeps track of past operations for better reproducibility.
-- **Undo/Redo Functionality**: Easily revert or reapply operations on NumPy arrays.
 
 ### Installation
 ```sh
