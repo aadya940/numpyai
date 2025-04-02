@@ -7,6 +7,7 @@ from ._validator import NumpyValidator
 from ._ai import NumpyCodeGen
 from ._utils import collect_metadata, collect_output_metadata
 from ._prompts import numpy_single_array_llm_prompt, validate_llm_output
+from ._exceptions import NumpyAIError
 
 c = Console()
 
@@ -14,8 +15,10 @@ c.log("Ensure your API KEY is set for your LLM as an environment variable.")
 
 
 class array:
+    """A wrapper around `numpy.ndarray` providing AI-powered functionalities, 
+    history tracking, and extended operations.
+    """
     def __init__(self, data):
-        """NumpyAI wrapper for `numpy.ndarray`."""
         assert isinstance(data, np.ndarray)
         self._data = data
 
