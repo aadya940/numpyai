@@ -15,6 +15,8 @@ pip install numpyai
 ```
 
 ### Usage Example
+
+#### Single Array
 ```python
 import numpyai as npi
 import numpy as np
