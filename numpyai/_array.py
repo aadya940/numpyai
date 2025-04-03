@@ -6,6 +6,8 @@ from rich.table import Table
 from rich.text import Text
 from rich import box
 import numpy as np
+from operator import add, sub, mul, truediv, floordiv, mod, pow, matmul
+
 import re
 from typing import Any, Dict, List, Optional, Union, Tuple
 
@@ -40,107 +42,60 @@ class array:
         self.current_prompt = None
         self.metadata = self._metadata_collector.metadata(self._data)
 
-    # Basic operators with scalar support
-    def __add__(self, other):
-        if isinstance(other, array):
-            result = self._data + other._data
-        else:
-            result = self._data + other
-        return array(result)
+    def _apply_operator(self, other, op):
+        other_data = other._data if isinstance(other, array) else other
+        return array(op(self._data, other_data))
 
-    def __radd__(self, other):
-        result = other + self._data
-        return array(result)
+    def _apply_r_operator(self, other, op):
+        return array(op(other, self._data))
+
+    def __add__(self, other):
+        return self._apply_operator(other, add)
 
     def __sub__(self, other):
-        if isinstance(other, array):
-            result = self._data - other._data
-        else:
-            result = self._data - other
-        return array(result)
-
-    def __rsub__(self, other):
-        result = other - self._data
-        return array(result)
+        return self._apply_operator(other, sub)
 
     def __mul__(self, other):
-        if isinstance(other, array):
-            result = self._data * other._data
-        else:
-            result = self._data * other
-        return array(result)
-
-    def __rmul__(self, other):
-        result = other * self._data
-        return array(result)
+        return self._apply_operator(other, mul)
 
     def __truediv__(self, other):
-        if isinstance(other, array):
-            result = self._data / other._data
-        else:
-            result = self._data / other
-        return array(result)
-
-    def __rtruediv__(self, other):
-        result = other / self._data
-        return array(result)
+        return self._apply_operator(other, truediv)
 
     def __floordiv__(self, other):
-        if isinstance(other, array):
-            result = self._data // other._data
-        else:
-            result = self._data // other
-        return array(result)
-
-    def __rfloordiv__(self, other):
-        result = other // self._data
-        return array(result)
-
-    def __pow__(self, other):
-        if isinstance(other, array):
-            result = self._data**other._data
-        else:
-            result = self._data**other
-        return array(result)
-
-    def __rpow__(self, other):
-        result = other**self._data
-        return array(result)
+        return self._apply_operator(other, floordiv)
 
     def __mod__(self, other):
-        if isinstance(other, array):
-            result = self._data % other._data
-        else:
-            result = self._data % other
-        return array(result)
+        return self._apply_operator(other, mod)
 
-    def __rmod__(self, other):
-        result = other % self._data
-        return array(result)
+    def __pow__(self, other):
+        return self._apply_operator(other, pow)
 
     def __matmul__(self, other):
-        """Matrix multiplication using @ operator."""
-        if isinstance(other, array):
-            result = self._data @ other._data
-        else:
-            result = self._data @ other
-        return array(result)
+        return self._apply_operator(other, matmul)
+
+    def __radd__(self, other):
+        return self._apply_r_operator(other, add)
+
+    def __rsub__(self, other):
+        return self._apply_r_operator(other, sub)
+
+    def __rmul__(self, other):
+        return self._apply_r_operator(other, mul)
+
+    def __rtruediv__(self, other):
+        return self._apply_r_operator(other, truediv)
+
+    def __rfloordiv__(self, other):
+        return self._apply_r_operator(other, floordiv)
+
+    def __rmod__(self, other):
+        return self._apply_r_operator(other, mod)
+
+    def __rpow__(self, other):
+        return self._apply_r_operator(other, pow)
 
     def __rmatmul__(self, other):
-        result = other @ self._data
-        return array(result)
-
-    def __neg__(self):
-        result = -self._data
-        return array(result)
-
-    def __pos__(self):
-        result = +self._data
-        return array(result)
-
-    def __abs__(self):
-        result = abs(self._data)
-        return array(result)
+        return self._apply_r_operator(other, matmul)
 
     def __getitem__(self, index):
         result = self._data[index]
@@ -150,7 +105,7 @@ class array:
         self._data[index] = value
 
     def __repr__(self):
-        return f"numpyai.array({repr(self._data.shape)})"
+        return f"numpyai.array(shape={self._data.shape}, dtype={self._data.dtype})"
 
     def __getattr__(self, name):
         """Implements numpy methods using method forwarding."""
@@ -167,144 +122,107 @@ class array:
         return attr  # Return as-is if it's not callable
 
     # Utility methods
-    def get_array(self):
-        """Returns the underlying Numpy Array of the `numpyai.array` class."""
+    @property
+    def data(self):
         return self._data
 
-    def set_array(self, new_array):
-        """Sets the underlying Numpy Array to `new_array`."""
+    @data.setter
+    def data(self, new_array):
         self._data = new_array
         self.metadata = self._metadata_collector.metadata(self._data)
 
     def chat(self, query):
         """Handles user queries by generating and executing NumPy code."""
         assert isinstance(query, str)
-
         console.print(
             Panel(f"[bold cyan]Query:[/bold cyan] {query}", border_style="blue")
         )
 
-        tries = 0
         error_messages = []
-
-        while tries < self.MAX_TRIES:
+        for attempt in range(1, self.MAX_TRIES + 1):
             console.print(
-                f"[bold green]Attempt {tries+1}/{self.MAX_TRIES}...[/bold green]"
+                f"[bold green]Attempt {attempt}/{self.MAX_TRIES}...[/bold green]"
             )
             self.current_prompt = query
+
             try:
                 _code = self.generate_numpy_code(query)
-                if isinstance(_code, str):
-                    console.print("[bold]Executing generated code...[/bold]")
-                    _res = self.execute_numpy_code(_code, self._data)
-                    if _res is None:
-                        error_messages.append(
-                            f"Try {tries+1}: Code execution returned None"
-                        )
-                        console.print(
-                            f"[bold red]✗[/bold red] Attempt {tries+1} failed: Code execution returned None"
-                        )
-                        tries += 1
-                        continue
+                if not isinstance(_code, str):
+                    continue
 
-                    self._output_metadata = (
-                        self._metadata_collector.collect_output_metadata(_res)
+                console.print("[bold]Executing generated code...[/bold]")
+                _res = self.execute_numpy_code(_code, self._data)
+                if _res is None:
+                    error_messages.append(
+                        f"Try {attempt}: Code execution returned None"
                     )
-                    # Generate and run test code
-                    _testing_prompt = self._validator.generate_validation_prompt(
-                        query=query,
-                        metadata=self.metadata,
-                        output_metadata=self._output_metadata,
-                    )
-                    _testing_code = self._code_generator.generate_response(
-                        _testing_prompt
-                    )
-                    _testing_code = re.sub(r"```(\w+)?", "", _testing_code).strip()
-
                     console.print(
-                        Panel(
-                            Syntax(
-                                _testing_code,
-                                "python",
-                                theme="monokai",
-                                line_numbers=True,
-                            ),
-                            title="[bold]Validation Code[/bold]",
-                            border_style="green",
-                        )
+                        f"[bold red]✗[/bold red] Attempt {attempt} failed: Code execution returned None"
                     )
+                    continue
 
-                    _test_args = {"arr": self._data, "code_out": _res}
-                    _test_response = self.execute_numpy_code(_testing_code, _test_args)
+                self._output_metadata = (
+                    self._metadata_collector.collect_output_metadata(_res)
+                )
+                _test_code = re.sub(
+                    r"```(\w+)?",
+                    "",
+                    self._code_generator.generate_response(
+                        self._validator.generate_validation_prompt(
+                            query, self.metadata, self._output_metadata
+                        )
+                    ),
+                ).strip()
 
-                    # Fix the boolean check with proper handling for arrays
-                    if _test_response is not None:
-                        if isinstance(_test_response, bool):
-                            if _test_response:
-                                console.print(
-                                    "[bold green]✓[/bold green] Validation successful!"
-                                )
-                                if isinstance(_res, np.ndarray):
-                                    return _res
-                                return _res
-                        elif isinstance(_test_response, np.ndarray):
-                            # Handle array truth value - use all() or any() based on your validation needs
-                            if _test_response.size == 1:
-                                if bool(_test_response.item()):
-                                    console.print(
-                                        "[bold green]✓[/bold green] Validation successful!"
-                                    )
-                                    if isinstance(_res, np.ndarray):
-                                        return _res
-                                    return _res
-                            elif (
-                                _test_response.all()
-                            ):  # or .any() depending on validation requirements
-                                console.print(
-                                    "[bold green]✓[/bold green] Validation successful!"
-                                )
-                                if isinstance(_res, np.ndarray):
-                                    return _res
-                                return _res
-                        else:
-                            # For other non-None return types, evaluate as boolean
-                            try:
-                                if bool(_test_response):
-                                    console.print(
-                                        "[bold green]✓[/bold green] Validation successful!"
-                                    )
-                                    if isinstance(_res, np.ndarray):
-                                        return _res
-                                    return _res
-                            except (ValueError, TypeError):
-                                # If boolean conversion fails, consider it a failed test
-                                error_messages.append(
-                                    f"Try {tries+1}: Validation failed - couldn't convert test response to boolean"
-                                )
-                                console.print(
-                                    f"[bold red]✗[/bold red] Validation failed - couldn't convert test response to boolean"
-                                )
-            except Exception as e:
-                error_messages.append(f"Try {tries+1}: {str(e)}")
                 console.print(
-                    f"[bold red]✗[/bold red] Attempt {tries+1} failed: {str(e)}"
+                    Panel(
+                        Syntax(
+                            _test_code, "python", theme="monokai", line_numbers=True
+                        ),
+                        title="[bold]Validation Code[/bold]",
+                        border_style="green",
+                    )
                 )
 
-            tries += 1
+                _test_response = self.execute_numpy_code(
+                    _test_code, {"arr": self._data, "code_out": _res}
+                )
+                if self._is_valid_test_response(_test_response):
+                    console.print("[bold green]✓[/bold green] Validation successful!")
+                    return _res
 
-        # More detailed error message with history of what went wrong
+            except Exception as e:
+                error_messages.append(f"Try {attempt}: {str(e)}")
+                console.print(
+                    f"[bold red]✗[/bold red] Attempt {attempt} failed: {str(e)}"
+                )
+
+        self._print_error_table(error_messages)
+        raise NumpyAIError(
+            f"[bold red]Failed after {self.MAX_TRIES} attempts.[/bold red]"
+        )
+
+    def _is_valid_test_response(self, response):
+        """Validates the test response based on type and boolean evaluation."""
+        if isinstance(response, bool):
+            return response
+        if isinstance(response, np.ndarray):
+            return response.size == 1 and bool(response.item()) or response.all()
+        try:
+            return bool(response)
+        except (ValueError, TypeError):
+            return False
+
+    def _print_error_table(self, error_messages):
+        """Displays an error summary table."""
         error_table = Table(title="Error Details", box=box.DOUBLE_EDGE)
         error_table.add_column("Attempt", style="cyan")
         error_table.add_column("Error", style="red")
 
-        for i, msg in enumerate(error_messages):
-            error_table.add_row(f"{i+1}", msg)
+        for i, msg in enumerate(error_messages, 1):
+            error_table.add_row(str(i), msg)
 
         console.print(error_table)
-
-        raise NumpyAIError(
-            f"[bold red]Failed to generate correct response after {self.MAX_TRIES} attempts.[/bold red]"
-        )
 
     def generate_numpy_code(self, query):
         """Generate valid NumPy code from the query."""
