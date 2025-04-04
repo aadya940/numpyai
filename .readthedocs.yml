@@ -13,4 +13,4 @@ python:
 build:
   os: ubuntu-20.04
   tools:
-    python: "3.9"  # Change this to the version you are using
+    python: "3.11"  # Change this to the version you are using
