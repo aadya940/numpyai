@@ -22,7 +22,12 @@ console.print(
 
 
 class NumpyAISession:
-    """Session to handle chatting with multiple arrays."""
+    """Session to handle chatting with multiple arrays.
+    
+    Args:
+        data: List[numpy.ndarray]
+            The data of the array class.
+    """
 
     MAX_TRIES = 3  # Class constant instead of instance attribute
 

@@ -27,6 +27,10 @@ console.print(
 class array:
     """A wrapper around `numpy.ndarray` providing AI-powered functionalities
     and extended operations.
+
+    Args:
+        data: numpy.ndarray
+            The data of the array class.
     """
 
     def __init__(self, data):
