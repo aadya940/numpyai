@@ -29,6 +29,13 @@ arr = npi.array(data)
 
 # Query NumPyAI with natural language
 print(arr.chat("Compute the height and width of the image using NumPy."))  # Expected output: (2, 6)
+
+
+arr1 = np.array([[1, 2, 3], [4, 5, 6]])
+arr2 = np.random.random((2, 3))
+
+sess = npi.NumpyAISession([arr1, arr2])
+imputed_array = sess.chat("Impute the first array with the mean of the second array.")
 ```
 
 ### Supported LLM Vendors
