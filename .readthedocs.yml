@@ -9,12 +9,9 @@ python:
     - method: pip
       path: .  # This installs your package in editable mode
 
-# Optional: Specify the version of Python to use
-python:
-  version: 3.12  # Change this to the version you are using
-
 # Optional: Specify the build environment
 build:
   os: ubuntu-20.04
   tools:
-    python: "3.12"  # Change this to the version you are using
+    python:
+      version: "3.9"  # Change this to the version you are using
