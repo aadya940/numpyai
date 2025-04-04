@@ -78,3 +78,39 @@ class NumpyValidator:
         # DON'T import external libraries
         import scipy.stats  # Not allowed
         """
+
+    def generate_validation_prompt_multiple(
+        self, query, input_metadata, output_metadata
+    ):
+        """New method for multiple arrays validation."""
+        input_metadata_str = "\n".join(
+            f"- **{name}**: {metadata}" for name, metadata in input_metadata.items()
+        )
+
+        return f"""Generate NumPy Code to independently validate that the following output is 
+        correct for the given query. The goal is to ensure correctness without simply 
+        re-executing the same operation.
+        
+        Query: 
+        {query}
+
+        CRITICAL INSTRUCTIONS:
+        1. The arrays are ALREADY defined as 'arr1', 'arr2', etc. DO NOT redefine them.
+        2. The output is ALREADY stored in 'code_out'. DO NOT redefine it.
+        3. Only import NumPy (which is already available). DO NOT import any other libraries.
+        4. Use an independent verification method when possible instead of simply recomputing the query.
+        5. Prioritize property-based checks (e.g., shape, statistics, known mathematical properties).
+        6. Ensure proper handling of NaNs, infinities, and edge cases.
+        7. Assign the final validation result to 'output' (Boolean: True if valid, False otherwise).
+        8. DO NOT use 'return' statements—always assign the result to 'output'.
+        9. Allow numerical tolerance (rtol=1e-5) where appropriate.
+        10. The variable 'output' should be assigned only once if all test cases pass.
+
+        The input arrays have these properties:
+        {input_metadata_str}
+        
+        The expected output has these properties:
+        {output_metadata}
+
+        # Correct and incorrect examples...
+        """

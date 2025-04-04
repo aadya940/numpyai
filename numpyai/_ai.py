@@ -66,3 +66,64 @@ class NumpyCodeGen:
         
         Your code must run using ONLY numpy functions. NO scipy, pandas, or other libraries.
         """
+
+    def generate_llm_prompt_multiple(self, query: str, context: dict) -> str:
+        """Generates an LLM prompt to handle multiple NumPy arrays in a session."""
+
+        def format_metadata(metadata):
+            """Convert metadata dictionary into a readable string format."""
+            summary = [
+                f"Shape: {metadata['shape']}, Dims: {metadata['dims']}, Type: {metadata['element_type']}",
+                f"Size: {metadata['size']} elements, Memory: {metadata['byte_size']} bytes",
+            ]
+
+            if metadata.get("has_nan", False):
+                summary.append("Contains NaN values")
+            if metadata.get("has_inf", False):
+                summary.append("Contains infinite values")
+            if "min" in metadata and "max" in metadata:
+                summary.append(f"Range: [{metadata['min']}, {metadata['max']}]")
+            if "zeros_count" in metadata and "non_zeros_count" in metadata:
+                summary.append(
+                    f"Zero elements: {metadata['zeros_count']}, Non-zero elements: {metadata['non_zeros_count']}"
+                )
+
+            return "; ".join(summary)
+
+        # Generate metadata descriptions
+        array_descriptions = "\n".join(
+            f"- **{name}**: {format_metadata(info['metadata'])}"
+            for name, info in context.items()
+        )
+
+        return f"""Generate NumPy code to perform the following operation: \n
+        {query}. \n
+        CRITICAL INSTRUCTIONS:
+        1. The following arrays are already defined: {', '.join(context.keys())}. DO NOT redefine them.
+        2. DO NOT IMPORT any libraries except numpy (which is already imported).
+        3. Use ONLY numpy functions. NO scipy, pandas, or any other library.
+        4. The code should modify or compute results using the existing arrays.
+        5. There must always be exactly one variable named "output" containing the result of the query.
+        6. Ensure data is properly cleaned before executing any computation.
+        
+        **Array Information:**
+        {array_descriptions}
+
+        CORRECT EXAMPLES:
+        # Compute the mean of arr1
+        output = np.mean(arr1)
+
+        # Fill NaN values in arr2 with the mean of arr1
+        arr2[np.isnan(arr2)] = np.mean(arr1)
+        output = arr2
+
+        INCORRECT EXAMPLES (DO NOT DO THIS):
+        # DON'T create new arrays from scratch
+        arr1 = np.array([1, 2, 3])  # WRONG!
+
+        # DON'T import additional libraries
+        from scipy.stats import zscore  # WRONG!
+        output = zscore(arr1)
+
+        Your code must be concise, clean, and use ONLY NumPy functions.
+        """
