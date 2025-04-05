@@ -1,3 +1,6 @@
+![logo](https://github.com/user-attachments/assets/7d6244d2-2a94-42c7-99e1-ba2953c21781)
+
+
 ### NumpyAI
 A Natural Language Interface for NumPy powered by LLMs.
 
