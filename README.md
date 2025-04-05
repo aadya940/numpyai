@@ -65,5 +65,4 @@ imputed_array = sess.chat("Impute the first array with the mean of the second ar
 
 ### Future Enhancements
 - Support for additional LLM providers (OpenAI, Anthropic, etc.)
-- Expanded validation mechanisms for complex operations
 - Interactive debugging and visualization tools
