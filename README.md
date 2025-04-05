@@ -16,6 +16,16 @@ NumpyAI enables seamless interaction with NumPy using natural language queries, 
 pip install numpyai
 ```
 
+Windows
+```
+set GOOGLE_API_KEY=...
+```
+
+Linux
+```
+export GOOGLE_API_KEY=...
+```
+
 ### Usage Example
 
 #### Single Array
