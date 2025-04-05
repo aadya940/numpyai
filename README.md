@@ -1,3 +1,8 @@
+<p align="center">
+<img src="https://github.com/user-attachments/assets/7d6244d2-2a94-42c7-99e1-ba2953c21781" alt="logo" width="500">
+</p>
+
+
 ### NumpyAI
 A Natural Language Interface for NumPy powered by LLMs.
 
@@ -17,12 +22,12 @@ pip install numpyai
 ```
 
 Windows
-```
+```sh
 set GOOGLE_API_KEY=...
 ```
 
 Linux
-```
+```sh
 export GOOGLE_API_KEY=...
 ```
 
@@ -44,7 +49,7 @@ print(arr.chat("Compute the height and width of the image using NumPy."))  # Exp
 ```
 
 #### Multiple Arrays
-```
+```python
 import numpyai as npi
 import numpy as np
 
@@ -60,5 +65,4 @@ imputed_array = sess.chat("Impute the first array with the mean of the second ar
 
 ### Future Enhancements
 - Support for additional LLM providers (OpenAI, Anthropic, etc.)
-- Expanded validation mechanisms for complex operations
 - Interactive debugging and visualization tools
