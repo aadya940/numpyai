@@ -44,7 +44,7 @@ print(arr.chat("Compute the height and width of the image using NumPy."))  # Exp
 ```
 
 #### Multiple Arrays
-```
+```python
 import numpyai as npi
 import numpy as np
 
