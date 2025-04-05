@@ -41,7 +41,12 @@ arr = npi.array(data)
 
 # Query NumPyAI with natural language
 print(arr.chat("Compute the height and width of the image using NumPy."))  # Expected output: (2, 6)
+```
 
+#### Multiple Arrays
+```
+import numpyai as npi
+import numpy as np
 
 arr1 = np.array([[1, 2, 3], [4, 5, 6]])
 arr2 = np.random.random((2, 3))
