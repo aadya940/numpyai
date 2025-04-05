@@ -22,12 +22,12 @@ pip install numpyai
 ```
 
 Windows
-```
+```sh
 set GOOGLE_API_KEY=...
 ```
 
 Linux
-```
+```sh
 export GOOGLE_API_KEY=...
 ```
 
