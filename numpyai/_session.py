@@ -23,7 +23,7 @@ console.print(
 
 class NumpyAISession:
     """Session to handle chatting with multiple arrays.
-    
+
     Args:
         data: List[numpy.ndarray]
             The data of the array class.
