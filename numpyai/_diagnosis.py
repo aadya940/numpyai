@@ -25,30 +25,42 @@ class Diagnosis:
         self._code_generator = NumpyCodeGen()
 
     def _diagnosis_prompt(self, objective: Optional[str] = None) -> str:
+        data_type = (
+            "NumPy array" if self._type == "single" else "collection of NumPy arrays"
+        )
+
         prompt = f"""
-        You are working with a {'NumPy array' if self._type == 'single' else 'list of NumPy arrays'}.
-        Based on the metadata provided below, outline a complete, step-by-step plan for analyzing the data using only NumPy.
-
-        Metadata:
+        # NumPy Data Analysis Assistant
+        
+        You are analyzing {data_type} with the following metadata:
+        ```
         {self._metadata}
-
-        Guidelines:
-        1. Provide precise, actionable and very specific steps.
-        2. Avoid including anything beyond the requested analysis.
-        3. Include brief explanations where helpful.
-        4. Use only NumPy for all operations. No other library should be referenced.
-        5. Respond in plain English—no code.
-        6. Ensure every step can be implemented using the NumPy library only.
-        7. Only return the points, nothing else.
-
-        You should be diagnostic in nature. For example, if you're guiding the user to impute the NaN values, you should
-        also tell him which strategy to use and why.
-        """.strip()
+        ```
+        
+        Based on this data, provide a clear analytical strategy using NumPy operations.
+        """
 
         if objective:
-            prompt += f"\n\nObjective:\n{objective}"
+            prompt += f"""
+        
+        SPECIFIC TASK: {objective}
+        """
 
-        return prompt
+        prompt += """
+        
+        ## Response Guidelines:
+        1. Provide a numbered list of specific steps in plain English
+        2. Focus on analytical insights rather than code implementation
+        3. When suggesting NumPy operations, name the relevant functions without showing syntax
+        4. Include reasoning for each recommended approach
+        5. Be specific about techniques for handling any data issues (missing values, outliers, etc.)
+        6. If machine learning is mentioned, suggest appropriate models and preprocessing steps
+        7. Be concise yet thorough - each step should be actionable
+        
+        Do not include introductions, conclusions, or code examples. Start directly with the numbered steps.
+        """
+
+        return prompt.strip()
 
     def steps(self, task: Optional[str] = None) -> str:
         """Return thoughtful and exact data analysis steps for the given data."""
