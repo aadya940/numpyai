@@ -12,6 +12,7 @@ This documentation covers the `array` and `NumpyAISession` classes.
    :maxdepth: 2
    :caption: Contents:
 
+   diagnosis
    array
    session
 
