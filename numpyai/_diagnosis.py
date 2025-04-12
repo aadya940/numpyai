@@ -57,6 +57,10 @@ class Diagnosis:
         5. Be specific about techniques for handling any data issues (missing values, outliers, etc.)
         6. If machine learning is mentioned, suggest appropriate models and preprocessing steps
         7. Be concise yet thorough - each step should be actionable
+        8. Specify what to do after executing each step. For instance, if you tell me to compute correlation,
+        also tell us how the output result can be used in context with the specific task.
+        9. Specify how to use the result of each step for diagnosis. For instance, if we calculate outliers in
+        a specific step. How to fix the outliers if they are present.
         
         Do not include introductions, conclusions, or code examples. Start directly with the numbered steps.
         """
