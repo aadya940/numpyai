@@ -13,6 +13,7 @@ console = Console()
 
 class Diagnosis:
     """Class for data analysis steps for the given NumpyAI objects."""
+
     def __init__(self, data: Union[array, NumpyAISession]):
         if isinstance(data, array):
             self._type = "single"

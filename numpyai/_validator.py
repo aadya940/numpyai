@@ -80,14 +80,14 @@ class NumpyValidator:
         """
 
     def generate_validation_prompt_multiple(
-        self, query, input_metadata, output_metadata
+        self, query, input_metadata, output_metadata, error=None
     ):
         """New method for multiple arrays validation."""
         input_metadata_str = "\n".join(
             f"- **{name}**: {metadata}" for name, metadata in input_metadata.items()
         )
 
-        return f"""Generate NumPy Code to independently validate that the following output is 
+        __prompt = f"""Generate NumPy Code to independently validate that the following output is 
         correct for the given query. The goal is to ensure correctness without simply 
         re-executing the same operation.
         
@@ -112,5 +112,7 @@ class NumpyValidator:
         The expected output has these properties:
         {output_metadata}
 
-        # Correct and incorrect examples...
         """
+        if error:
+            __prompt += f"Please take care of the following error message:\n {error}"
+        return __prompt

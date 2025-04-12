@@ -52,7 +52,7 @@ class NumpyAISession:
                 "metadata": self._metadata_collector.metadata(arr),
             }
 
-    def validate_output(self, query: str, output: Any) -> bool:
+    def validate_output(self, query: str, output: Any, error=None) -> bool:
         """Validates the output of a NumPy operation."""
         input_metadata = {
             name: info["metadata"] for name, info in self._context.items()
@@ -60,7 +60,7 @@ class NumpyAISession:
         output_metadata = self._metadata_collector.collect_output_metadata(output)
 
         validation_prompt = self._validator.generate_validation_prompt_multiple(
-            query, input_metadata, output_metadata
+            query, input_metadata, output_metadata, error=error
         )
         validation_code = self._code_generator.generate_response(validation_prompt)
         validation_code = self._clean_code(validation_code)
@@ -130,7 +130,13 @@ class NumpyAISession:
                     )
                     continue
 
-                if self.validate_output(query, result):
+                if self.validate_output(query, result, error=error_messages[-1]):
+                    console.print(
+                        Panel(
+                            f"[bold green]Output\n {result if not isinstance(result, np.ndarray) else type(result)}",
+                            border_style="yellow",
+                        )
+                    )
                     return result
 
                 raise NumpyAIError("Validation failed for the output.")
