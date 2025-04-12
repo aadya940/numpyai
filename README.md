@@ -4,7 +4,7 @@
 
 
 ### NumpyAI
-A Natural Language Interface for NumPy powered by LLMs.
+A Natural Language Interface for NumPy powered by LLMs. Empowering mindful data analysis using Generative AI.
 
 ### About NumpyAI
 NumpyAI enables seamless interaction with NumPy using natural language queries, making numerical computing more intuitive and efficient.
@@ -13,7 +13,7 @@ NumpyAI enables seamless interaction with NumPy using natural language queries, 
 - **Natural Language Processing**: Convert plain language instructions into executable NumPy code.
 - **Validation & Safety**: Automatically validates and tests generated code for correctness and security.
 - **Transparency**: Logs all generated code and applies checks to ensure accuracy before execution.
-- We don't allow AI to reassign or change the internal arrays passed to `numpyai.array` or `numpyai.NumpyAISession`. We believe they need to be intentional decisions by the user.
+- **Control**: We don't allow AI to reassign or change the internal arrays passed to `numpyai.array` or `numpyai.NumpyAISession`. We believe they need to be intentional decisions by the user.
 
 
 ### Installation
