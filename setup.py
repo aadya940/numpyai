@@ -5,7 +5,7 @@ with open("requirements.txt", "r") as f:
 
 setup(
     name="numpyai",
-    version="0.1.0",
+    version="0.2.0",
     author="Aadya Chinubhai",
     author_email="aadyachinubhai@gmail.com",
     description="A library for extracting documentation and implementing a RAG system.",
