@@ -43,7 +43,7 @@ class NumpyCodeGen:
         4. Return ONLY the code that operates on the existing 'arr' variable.
         5. There should always be exactly one variable named "output" which contains what 
         the user asked for.
-        6. Beautifully Print what is important so the code is explainable.
+        6. Beautifully Print what is important so the code is explainable and the users understand the output.
         7. Ensure data is properly cleaned before executing any code.
         
         The array has these properties:
@@ -105,6 +105,7 @@ class NumpyCodeGen:
         4. The code should modify or compute results using the existing arrays.
         5. There must always be exactly one variable named "output" containing the result of the query.
         6. Ensure data is properly cleaned before executing any computation.
+        7. Beautifully Print what is important so the code is explainable and the users understand the output.
         
         **Array Information:**
         {array_descriptions}
