@@ -11,7 +11,7 @@ NumpyAI enables seamless interaction with NumPy using natural language queries, 
 
 #### Key Features:
 - **Natural Language Processing**: Convert plain language instructions into executable NumPy code.
-- **Validation & Safety**: Automatically validates and tests generated code for correctness and security.
+- **Validation & Safety**: Automatically validates and tests generated code for correctness and security. We will tell you we failed if we think the outputs might not be correct (don't pass the validation tests).
 - **Transparency**: Logs all generated code and applies checks to ensure accuracy before execution.
 - **Control**: We don't allow AI to reassign or change the internal arrays passed to `numpyai.array` or `numpyai.NumpyAISession`. We believe they need to be intentional decisions by the user.
 
@@ -66,3 +66,11 @@ imputed_array = sess.chat("Impute the first array with the mean of the second ar
 ### Future Enhancements
 - Support for additional LLM providers (OpenAI, Anthropic, etc.)
 - Interactive debugging and visualization tools
+
+### Contributing Guidelines
+- Apply the `black` formatter.
+- The code should be well documented and be rendered in the docs.
+- For testing, add it in the `examples/all_functionality.ipynb` notebook.
+- Ensure backward compatibility.
+
+Thank you and looking forward to seeing you contribute to NumpyAI :) !
