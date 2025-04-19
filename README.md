@@ -66,3 +66,11 @@ imputed_array = sess.chat("Impute the first array with the mean of the second ar
 ### Future Enhancements
 - Support for additional LLM providers (OpenAI, Anthropic, etc.)
 - Interactive debugging and visualization tools
+
+### Contributing Guidelines
+- Apply the `black` formatter.
+- The code should be well documented and be rendered in the docs.
+- For testing, add it in the `examples/all_functionality.ipynb` notebook.
+- Ensure backward compatibility.
+
+Thank you and looking forward to seeing you contribute to NumpyAI :) !
