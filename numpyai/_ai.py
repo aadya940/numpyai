@@ -45,6 +45,8 @@ class NumpyCodeGen:
         the user asked for.
         6. Beautifully Print what is important so the code is explainable and the users understand the output.
         7. Ensure data is properly cleaned before executing any code.
+        8. As the very last option, if needed only, use sklearn (already imported as `sklearn`), matplotlib.pyplot (already imported as `plt`). 
+        DO NOT USE IT IF NOT NECESSARY.
         
         The array has these properties:
         {metadata}
@@ -106,7 +108,9 @@ class NumpyCodeGen:
         5. There must always be exactly one variable named "output" containing the result of the query.
         6. Ensure data is properly cleaned before executing any computation.
         7. Beautifully Print what is important so the code is explainable and the users understand the output.
-        
+        8. As the very last option, if needed only, use sklearn (already imported as `sklearn`), matplotlib.pyplot (already imported as `plt`). 
+        DO NOT USE IT IF NOT NECESSARY.
+
         **Array Information:**
         {array_descriptions}
 

@@ -8,10 +8,13 @@ from rich.table import Table
 from rich import box
 
 from ._array import array
-from ._utils import NumpyMetadataCollector
+from ._utils import NumpyMetadataCollector, clean_code
 from ._ai import NumpyCodeGen
 from ._exceptions import NumpyAIError
 from ._validator import NumpyValidator
+
+import sklearn
+import matplotlib.pyplot as plt
 
 # Initialize rich console
 console = Console()
@@ -27,11 +30,13 @@ class NumpyAISession:
     Args:
         data: List[numpy.ndarray]
             The data of the array class.
+        verbose: boolean
+            Shows all code executions if True, else only shows the final execution.
     """
 
     MAX_TRIES = 3  # Class constant instead of instance attribute
 
-    def __init__(self, data: List[Union[np.ndarray, array]]) -> None:
+    def __init__(self, data: List[Union[np.ndarray, array]], verbose=False) -> None:
         self._context: Dict[str, Dict[str, Union[np.ndarray, Dict]]] = {}
         self._metadata_collector = NumpyMetadataCollector()
         self._code_generator = NumpyCodeGen()
@@ -40,6 +45,7 @@ class NumpyAISession:
         self._initialize_arrays(data)
         self.current_prompt = None
         self._output_metadata = {}
+        self.verbose = verbose
 
     def _initialize_arrays(self, data: List[Union[np.ndarray, array]]) -> None:
         """Stores input arrays with default names arr1, arr2, etc."""
@@ -67,23 +73,29 @@ class NumpyAISession:
 
         # Wrap the validation code in Syntax for better display
         syntax = Syntax(validation_code, "python", theme="monokai", line_numbers=True)
-        console.print(Panel(syntax, title="Validation Code", border_style="blue"))
+        if self.verbose:
+            console.print(Panel(syntax, title="Validation Code", border_style="blue"))
 
         # Execute the validation code
         validation_result = self.execute_numpy_code(validation_code, code_out=output)
 
-        console.print(
-            Panel(
-                "Validation Successful." if validation_result else "Validation Failed.",
-                style="bold green" if validation_result else "bold red",
+        if self.verbose:
+            console.print(
+                Panel(
+                    (
+                        "Validation Successful."
+                        if validation_result
+                        else "Validation Failed."
+                    ),
+                    style="bold green" if validation_result else "bold red",
+                )
             )
-        )
 
         return validation_result
 
     def _clean_code(self, code: str) -> str:
         """Remove code blocks and extra whitespace from LLM response."""
-        return re.sub(r"```(\w+)?", "", code).strip()
+        return clean_code(code)
 
     def generate_numpy_code(self, query: str, context: Dict) -> str:
         """Generate valid NumPy code from the query."""
@@ -105,12 +117,13 @@ class NumpyAISession:
         error_messages = []
 
         for attempt in range(1, self.MAX_TRIES + 1):
-            console.print(
-                Panel(
-                    f"[bold green]Attempt {attempt}/{self.MAX_TRIES}...[/bold green]",
-                    border_style="yellow",
+            if self.verbose:
+                console.print(
+                    Panel(
+                        f"[bold green]Attempt {attempt}/{self.MAX_TRIES}...[/bold green]",
+                        border_style="yellow",
+                    )
                 )
-            )
 
             try:
                 self.current_prompt = query
@@ -122,21 +135,24 @@ class NumpyAISession:
                     error_messages.append(
                         f"Attempt {attempt}: Execution returned None."
                     )
-                    console.print(
-                        Panel(
-                            f"[bold red]✗[/bold red] Execution returned None.",
-                            border_style="red",
+                    if self.verbose:
+                        console.print(
+                            Panel(
+                                f"[bold red]✗[/bold red] Execution returned None.",
+                                border_style="red",
+                            )
                         )
-                    )
+
                     continue
 
                 if self.validate_output(query, result, error=error_messages[-1]):
-                    console.print(
-                        Panel(
-                            f"[bold green]Output\n {result if not isinstance(result, np.ndarray) else type(result)}",
-                            border_style="yellow",
+                    if self.verbose or (attempt == self.MAX_TRIES):
+                        console.print(
+                            Panel(
+                                f"[bold green]Output\n {result if not isinstance(result, np.ndarray) else type(result)}",
+                                border_style="yellow",
+                            )
                         )
-                    )
                     return result
 
                 raise NumpyAIError("Validation failed for the output.")
@@ -144,12 +160,13 @@ class NumpyAISession:
             except Exception as e:
                 exceptions.append(str(e))
                 error_messages.append(f"Attempt {attempt}: {str(e)}")
-                console.print(
-                    Panel(
-                        f"[bold red]✗[/bold red] Attempt {attempt} failed: {str(e)}",
-                        border_style="red",
+                if self.verbose or (attempt == self.MAX_TRIES):
+                    console.print(
+                        Panel(
+                            f"[bold red]✗[/bold red] Attempt {attempt} failed: {str(e)}",
+                            border_style="red",
+                        )
                     )
-                )
 
         # Print error details before raising the final exception
         self._print_error_table(error_messages)
@@ -165,13 +182,14 @@ class NumpyAISession:
             try:
                 if self._validator.validate_code(code):
                     syntax = Syntax(code, "python", theme="monokai", line_numbers=True)
-                    console.print(
-                        Panel(
-                            syntax,
-                            title="[bold]Generated Code[/bold]",
-                            border_style="blue",
+                    if self.verbose:
+                        console.print(
+                            Panel(
+                                syntax,
+                                title="[bold]Generated Code[/bold]",
+                                border_style="blue",
+                            )
                         )
-                    )
 
                     return code
 
@@ -210,7 +228,12 @@ class NumpyAISession:
             local_vars["code_out"] = code_out
 
         try:
-            exec_globals = {"__builtins__": __builtins__, "np": np}
+            exec_globals = {
+                "__builtins__": __builtins__,
+                "np": np,
+                "plt": plt,
+                "sklearn": sklearn,
+            }
             exec(code, exec_globals, local_vars)  # Execute code in controlled scope
             result = local_vars.get("output", None)
 
@@ -221,7 +244,8 @@ class NumpyAISession:
                 if len(output_lines) > 10:
                     preview += "\n... (output truncated)"
 
-                console.print(preview)
+                if self.verbose:
+                    console.print(preview)
                 return result
 
             return None

@@ -7,13 +7,15 @@ from rich.text import Text
 from rich import box
 import numpy as np
 from operator import add, sub, mul, truediv, floordiv, mod, pow, matmul
+import matplotlib.pyplot as plt
+import sklearn
 
 import re
 from typing import Any, Dict, List, Optional, Union, Tuple
 
 from ._validator import NumpyValidator
 from ._ai import NumpyCodeGen
-from ._utils import NumpyMetadataCollector
+from ._utils import NumpyMetadataCollector, clean_code
 from ._exceptions import NumpyAIError
 
 # Initialize rich console
@@ -31,15 +33,19 @@ class array:
     Args:
         data: numpy.ndarray
             The data of the array class.
+        verbose: bool, default=True
+            If False, only show rich console outputs when the try is the last try,
+            successful, or fails in the last try.
     """
 
-    def __init__(self, data):
+    def __init__(self, data, verbose=False):
         assert isinstance(data, np.ndarray)
         self._data = data
         self._metadata_collector = NumpyMetadataCollector()
         self._validator = NumpyValidator()
         self._code_generator = NumpyCodeGen()
         self.MAX_TRIES = 3
+        self.verbose = verbose
 
         self._output_metadata = {}
 
@@ -144,49 +150,52 @@ class array:
 
         error_messages = []
         for attempt in range(1, self.MAX_TRIES + 1):
-            console.print(
-                f"[bold green]Attempt {attempt}/{self.MAX_TRIES}...[/bold green]"
-            )
+            # Only display attempt messages if verbose or last attempt
+            if self.verbose or attempt == self.MAX_TRIES:
+                console.print(
+                    f"[bold green]Attempt {attempt}/{self.MAX_TRIES}...[/bold green]"
+                )
             self.current_prompt = query
 
             try:
-                _code = self.generate_numpy_code(query)
+                _code = self.generate_numpy_code(query, attempt)
                 if not isinstance(_code, str):
                     continue
 
-                console.print("[bold]Executing generated code...[/bold]")
+                if self.verbose or attempt == self.MAX_TRIES:
+                    console.print("[bold]Executing generated code...[/bold]")
                 _res = self.execute_numpy_code(_code, self._data)
                 if _res is None:
                     error_messages.append(
                         f"Try {attempt}: Code execution returned None"
                     )
-                    console.print(
-                        f"[bold red]✗[/bold red] Attempt {attempt} failed: Code execution returned None"
-                    )
+                    if self.verbose or attempt == self.MAX_TRIES:
+                        console.print(
+                            f"[bold red]✗[/bold red] Attempt {attempt} failed: Code execution returned None"
+                        )
                     continue
 
                 self._output_metadata = (
                     self._metadata_collector.collect_output_metadata(_res)
                 )
-                _test_code = re.sub(
-                    r"```(\w+)?",
-                    "",
+                _test_code = clean_code(
                     self._code_generator.generate_response(
                         self._validator.generate_validation_prompt(
                             query, self.metadata, self._output_metadata
                         )
-                    ),
-                ).strip()
-
-                console.print(
-                    Panel(
-                        Syntax(
-                            _test_code, "python", theme="monokai", line_numbers=True
-                        ),
-                        title="[bold]Validation Code[/bold]",
-                        border_style="green",
                     )
                 )
+
+                if self.verbose or attempt == self.MAX_TRIES:
+                    console.print(
+                        Panel(
+                            Syntax(
+                                _test_code, "python", theme="monokai", line_numbers=True
+                            ),
+                            title="[bold]Validation Code[/bold]",
+                            border_style="green",
+                        )
+                    )
 
                 _test_response = self.execute_numpy_code(
                     _test_code, {"arr": self._data, "code_out": _res}
@@ -197,9 +206,10 @@ class array:
 
             except Exception as e:
                 error_messages.append(f"Try {attempt}: {str(e)}")
-                console.print(
-                    f"[bold red]✗[/bold red] Attempt {attempt} failed: {str(e)}"
-                )
+                if self.verbose or attempt == self.MAX_TRIES:
+                    console.print(
+                        f"[bold red]✗[/bold red] Attempt {attempt} failed: {str(e)}"
+                    )
 
         self._print_error_table(error_messages)
         raise NumpyAIError(
@@ -228,39 +238,43 @@ class array:
 
         console.print(error_table)
 
-    def generate_numpy_code(self, query):
+    def generate_numpy_code(self, query, attempt=1):
         """Generate valid NumPy code from the query."""
         pr = self._code_generator.generate_llm_prompt(
             query=query, metadata=self.metadata
         )
         llm_res = self._code_generator.generate_response(pr)
 
-        syntax = Syntax(llm_res, "python", theme="monokai", line_numbers=True)
-        console.print(
-            Panel(syntax, title="[bold]Generated Code[/bold]", border_style="blue")
-        )
+        # Only display the code panel if verbose or last attempt
+        if self.verbose or attempt == self.MAX_TRIES:
+            syntax = Syntax(llm_res, "python", theme="monokai", line_numbers=True)
+            console.print(
+                Panel(syntax, title="[bold]Generated Code[/bold]", border_style="blue")
+            )
 
-        return self.assert_is_code(llm_res)
+        return self.assert_is_code(llm_res, attempt)
 
-    def assert_is_code(self, llm_response):
+    def assert_is_code(self, llm_response, attempt=1):
         """Ensure LLM response is valid Python/NumPy code."""
         if not isinstance(llm_response, str):
-            console.print("[bold red]✗[/bold red] LLM response is not a string")
+            if self.verbose or attempt == self.MAX_TRIES:
+                console.print("[bold red]✗[/bold red] LLM response is not a string")
             raise ValueError("LLM response is not a string")
 
         tries = 0
         error_messages = []
 
         while tries < self.MAX_TRIES:
-            code = re.sub(r"```(\w+)?", "", llm_response).strip()
+            code = clean_code(r"```(\w+)?", "", llm_response)
             try:
                 if self._validator.validate_code(code):
                     return code
             except SyntaxError as e:
                 error_messages.append(f"Syntax error: {str(e)}")
                 tries += 1
-                console.print(f"[bold red]✗[/bold red] Syntax error: {str(e)}")
-                console.print("[yellow]Regenerating code...[/yellow]")
+                if self.verbose or tries == self.MAX_TRIES:
+                    console.print(f"[bold red]✗[/bold red] Syntax error: {str(e)}")
+                    console.print("[yellow]Regenerating code...[/yellow]")
                 llm_response = self._code_generator.generate_response(
                     self.current_prompt
                 )
@@ -268,6 +282,7 @@ class array:
 
             tries += 1
 
+        # Always show the error table at the end of all attempts
         error_table = Table(title="Code Validation Errors", box=box.SIMPLE)
         error_table.add_column("Attempt", style="cyan")
         error_table.add_column("Error", style="red")
@@ -289,7 +304,7 @@ class array:
             args: Either the array itself or a dict containing variables for execution
         """
         try:
-            local_vars = {"np": np}
+            local_vars = {"np": np, "plt": plt, "sklearn": sklearn}
 
             if isinstance(args, dict):
                 local_vars.update(args)
@@ -300,10 +315,11 @@ class array:
             exec(code, {"__builtins__": __builtins__}, local_vars)
             result = local_vars.get("output")
 
-            if result is not None:
+            if result is not None and self.verbose:
                 console.print("\n".join(str(result).split("\n")[:10]))
             return result
 
         except Exception as e:
-            console.print(f"[bold red]✗[/bold red] Error executing code: {str(e)}")
+            if self.verbose:
+                console.print(f"[bold red]✗[/bold red] Error executing code: {str(e)}")
             return None

@@ -1,4 +1,5 @@
 import numpy as np
+import re
 
 
 class NumpyMetadataCollector:
@@ -125,3 +126,8 @@ class NumpyMetadataCollector:
             )
 
         return metadata
+
+
+def clean_code(code):
+    """Strip the code from ```python ... ``` returned by the LLM"""
+    return re.sub(r"```(\w+)?", "", code).strip()

@@ -1,3 +1,5 @@
 numpy
 google-generativeai
 rich
+matplotlib
+scikit-learn

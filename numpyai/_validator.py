@@ -35,6 +35,7 @@ class NumpyValidator:
         8. DO NOT use 'return' statements—always assign the result to 'output'.
         9. Allow numerical tolerance (rtol=1e-5) where appropriate.
         10. The variable 'output' should be assigned only once if all test cases pass.
+        11. If the type of the output is `None`, don't test anything.
 
         The input array has these properties:
         {metadata}
@@ -105,7 +106,8 @@ class NumpyValidator:
         8. DO NOT use 'return' statements—always assign the result to 'output'.
         9. Allow numerical tolerance (rtol=1e-5) where appropriate.
         10. The variable 'output' should be assigned only once if all test cases pass.
-
+        11. If the type of the output is `None`, don't test anything.
+        
         The input arrays have these properties:
         {input_metadata_str}
         
