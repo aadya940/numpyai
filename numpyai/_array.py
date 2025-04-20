@@ -36,14 +36,20 @@ class array:
         verbose: bool, default=True
             If False, only show rich console outputs when the try is the last try,
             successful, or fails in the last try.
+        provider_name (str):
+            LLM provider name ("google", "openai", or "claude").
+        model_name (Optional[str]):
+             Specific model name to use (defaults per provider).
     """
 
-    def __init__(self, data, verbose=False):
+    def __init__(self, data, verbose=False, provider_name="google", model_name=None):
         assert isinstance(data, np.ndarray)
         self._data = data
         self._metadata_collector = NumpyMetadataCollector()
         self._validator = NumpyValidator()
-        self._code_generator = NumpyCodeGen()
+        self._code_generator = NumpyCodeGen(
+            provider_name=provider_name, model_name=model_name
+        )
         self.MAX_TRIES = 3
         self.verbose = verbose
 
@@ -51,6 +57,9 @@ class array:
 
         self.current_prompt = None
         self.metadata = self._metadata_collector.metadata(self._data)
+
+        self._cur_provider = provider_name
+        self._cur_model = model_name
 
     def _apply_operator(self, other, op):
         other_data = other._data if isinstance(other, array) else other

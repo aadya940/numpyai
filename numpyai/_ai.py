@@ -1,4 +1,3 @@
-import google.generativeai as genai
 import os
 from rich.console import Console
 
@@ -6,32 +5,94 @@ c = Console()
 
 
 class NumpyCodeGen:
-    """Generates Numpy code for execution."""
+    """
+    Generates NumPy code from natural language using LLMs (Gemini, GPT, Claude).
 
-    def __init__(self, model_name=None) -> None:
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+    Parameters:
+        provider_name (str):
+            LLM provider name ("google", "openai", or "claude").
+        model_name (Optional[str]):
+             Specific model name to use (defaults per provider).
+    """
 
-        if not model_name:
-            self._model_name = "gemini-2.0-flash"  # Use a valid Gemini model
+    def __init__(self, provider_name="google", model_name=None) -> None:
+        self._provider_name = provider_name.lower()
+
+        if self._provider_name == "google":
+            try:
+                import google.generativeai as genai
+            except ImportError:
+                raise ImportError("Couldn't import `google-generativeai`.")
+
+            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+            self._model_name = model_name or "gemini-2.0-flash"
+            self._system_prompt = (
+                "You are a coding assistant who generates only NumPy and Python code."
+            )
+            self.messages = [{"role": "user", "parts": [self._system_prompt]}]
+
+        elif self._provider_name == "openai":
+            try:
+                import openai
+            except ImportError:
+                raise ImportError("Couldn't import `openai`.")
+
+            openai.api_key = os.getenv("OPENAI_API_KEY")
+            self._model_name = model_name or "gpt-4-turbo"
+            self.messages = [
+                {
+                    "role": "system",
+                    "content": "You are a coding assistant who generates only NumPy and Python code.",
+                }
+            ]
+
+        elif self._provider_name == "claude":
+            try:
+                import anthropic
+            except ImportError:
+                raise ImportError("Couldn't import `anthropic`.")
+
+            self._client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+            self._model_name = model_name or "claude-3-opus-20240229"
+            self._system_prompt = (
+                "You are a coding assistant who generates only NumPy and Python code."
+            )
+
         else:
-            self._model_name = model_name
-
-        self._system_prompt = (
-            "You are a coding assistant who generates only NumPy and Python code."
-        )
-        self.messages = [{"role": "user", "parts": [self._system_prompt]}]
+            raise ValueError(f"Unknown provider: {self._provider_name}")
 
     def generate_response(self, query: str) -> str:
         assert isinstance(query, str), "Query must be a string"
-        self.messages.append({"role": "user", "parts": [query]})
 
-        model = genai.GenerativeModel(self._model_name)  # Initialize the model
-        response = model.generate_content(self.messages)  # Generate response
+        if self._provider_name == "google":
+            import google.generativeai as genai
 
-        if not response or not hasattr(response, "text"):
-            return "Error: No response generated."
+            self.messages.append({"role": "user", "parts": [query]})
+            model = genai.GenerativeModel(self._model_name)
+            response = model.generate_content(self.messages)
+            return getattr(response, "text", "Error: No response generated.")
 
-        return response.text  # Gemini responses have a `.text` attribute
+        elif self._provider_name == "openai":
+            import openai
+
+            self.messages.append({"role": "user", "content": query})
+            response = openai.ChatCompletion.create(
+                model=self._model_name, messages=self.messages
+            )
+            return response["choices"][0]["message"]["content"].strip()
+
+        elif self._provider_name == "claude":
+            import anthropic
+
+            response = self._client.messages.create(
+                model=self._model_name,
+                max_tokens=1024,
+                system=self._system_prompt,
+                messages=[{"role": "user", "content": query}],
+            )
+            return response.content[0].text.strip()
+
+        return "Error: Unsupported provider."
 
     def generate_llm_prompt(self, query: str, metadata: dict) -> str:
         return f"""Generate NumPy code to perform the following operation: \n

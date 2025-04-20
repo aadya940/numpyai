@@ -14,6 +14,8 @@ NumpyAI enables seamless interaction with NumPy using natural language queries, 
 - **Validation & Safety**: Automatically validates and tests generated code for correctness and security. We will tell you we failed if we think the outputs might not be correct (don't pass the validation tests).
 - **Transparency**: Logs all generated code and applies checks to ensure accuracy before execution.
 - **Control**: We don't allow AI to reassign or change the internal arrays passed to `numpyai.array` or `numpyai.NumpyAISession`. We believe they need to be intentional decisions by the user.
+- Support for additional LLM providers (OpenAI, Anthropic, etc.)
+- Interactive debugging and visualization tools
 
 
 ### Installation
@@ -23,12 +25,12 @@ pip install numpyai
 
 Windows
 ```sh
-set GOOGLE_API_KEY=...
+set GEMINI_API_KEY=...
 ```
 
 Linux
 ```sh
-export GOOGLE_API_KEY=...
+export GEMINI_API_KEY=...
 ```
 
 ### Usage Example
@@ -62,10 +64,8 @@ imputed_array = sess.chat("Impute the first array with the mean of the second ar
 
 ### Supported LLM Vendors
 - Google Gemini
-
-### Future Enhancements
-- Support for additional LLM providers (OpenAI, Anthropic, etc.)
-- Interactive debugging and visualization tools
+- OpenAI
+- Anthropic
 
 ### Contributing Guidelines
 - Apply the `black` formatter.

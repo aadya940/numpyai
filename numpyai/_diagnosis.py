@@ -31,7 +31,7 @@ class Diagnosis:
         self.MAX_TRIES = 3
         self._cur_tries = 0
 
-        self._code_generator = NumpyCodeGen()
+        self._code_generator = NumpyCodeGen(data._cur_provider, data._cur_model)
 
     def _diagnosis_prompt(self, objective: Optional[str] = None) -> str:
         data_type = (

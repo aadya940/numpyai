@@ -32,11 +32,21 @@ class NumpyAISession:
             The data of the array class.
         verbose: boolean
             Shows all code executions if True, else only shows the final execution.
+        provider_name (str):
+            LLM provider name ("google", "openai", or "claude").
+        model_name (Optional[str]):
+             Specific model name to use (defaults per provider).
     """
 
     MAX_TRIES = 3  # Class constant instead of instance attribute
 
-    def __init__(self, data: List[Union[np.ndarray, array]], verbose=False) -> None:
+    def __init__(
+        self,
+        data: List[Union[np.ndarray, array]],
+        verbose=False,
+        provider_name="google",
+        model_name=None,
+    ) -> None:
         self._context: Dict[str, Dict[str, Union[np.ndarray, Dict]]] = {}
         self._metadata_collector = NumpyMetadataCollector()
         self._code_generator = NumpyCodeGen()
@@ -46,6 +56,9 @@ class NumpyAISession:
         self.current_prompt = None
         self._output_metadata = {}
         self.verbose = verbose
+
+        self._cur_provider = provider_name
+        self._cur_model = model_name
 
     def _initialize_arrays(self, data: List[Union[np.ndarray, array]]) -> None:
         """Stores input arrays with default names arr1, arr2, etc."""
