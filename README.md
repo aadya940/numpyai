@@ -25,12 +25,12 @@ pip install numpyai
 
 Windows
 ```sh
-set GEMINI_API_KEY=...
+set GOOGLE_API_KEY=...
 ```
 
 Linux
 ```sh
-export GEMINI_API_KEY=...
+export GOOGLE_API_KEY=...
 ```
 
 ### Usage Example
