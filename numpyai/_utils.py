@@ -44,6 +44,21 @@ class NumpyMetadataCollector:
             except Exception:
                 pass
 
+        try:
+            md.update(
+                {
+                    "array-preview": (
+                        data[: max(len(data) // 2, 15)] if (15 < len(data)) else data
+                    ),
+                }
+            )
+        except:
+            pass
+
+        # Large array hints
+        if data.size > 1000000:
+            md["large_array"] = True
+
         return md
 
     @staticmethod
