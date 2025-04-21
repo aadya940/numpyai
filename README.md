@@ -23,6 +23,17 @@ NumpyAI enables seamless interaction with NumPy using natural language queries, 
 pip install numpyai
 ```
 
+### Installation from Source
+
+Clone the project then:
+
+```sh
+cd numpyai/; pip install -r requirements.txt ; pip install .
+```
+
+
+### Setup
+
 Windows
 ```sh
 set GOOGLE_API_KEY=...
