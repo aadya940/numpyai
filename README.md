@@ -4,7 +4,7 @@
 
 
 ### NumpyAI
-A Natural Language Interface for NumPy powered by LLMs. Empowering mindful data analysis using Generative AI.
+A Natural Language Interface for [NumPy](https://github.com/numpy/numpy) powered by LLMs. Empowering mindful data analysis using Generative AI.
 
 ### About NumpyAI
 NumpyAI enables seamless interaction with NumPy using natural language queries, making numerical computing more intuitive and efficient.
