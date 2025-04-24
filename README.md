@@ -18,6 +18,7 @@ NumpyAI enables seamless interaction with NumPy using natural language queries, 
 - Full transparency, know what code was executed by the LLM using the `verbose=True` flag.
 - Supports frameworks like `sklearn` and `matplotlib` for basic tasks.
 - Interactive debugging and re-tries.
+- NumPy compatible.
 
 
 ### Installation
