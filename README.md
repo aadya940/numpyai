@@ -4,7 +4,7 @@
 
 
 ### NumpyAI
-A Natural Language Interface for NumPy powered by LLMs. Empowering mindful data analysis using Generative AI.
+A Natural Language Interface for [NumPy](https://github.com/numpy/numpy) powered by LLMs. Empowering mindful data analysis using Generative AI.
 
 ### About NumpyAI
 NumpyAI enables seamless interaction with NumPy using natural language queries, making numerical computing more intuitive and efficient.
@@ -23,14 +23,25 @@ NumpyAI enables seamless interaction with NumPy using natural language queries, 
 pip install numpyai
 ```
 
+### Installation from Source
+
+Clone the project then:
+
+```sh
+cd numpyai/; pip install -r requirements.txt ; pip install .
+```
+
+
+### Setup
+
 Windows
 ```sh
-set GEMINI_API_KEY=...
+set GOOGLE_API_KEY=...
 ```
 
 Linux
 ```sh
-export GEMINI_API_KEY=...
+export GOOGLE_API_KEY=...
 ```
 
 ### Usage Example
@@ -60,6 +71,19 @@ arr2 = np.random.random((2, 3))
 
 sess = npi.NumpyAISession([arr1, arr2])
 imputed_array = sess.chat("Impute the first array with the mean of the second array.")
+```
+
+#### Diagnosis
+```python
+import numpyai as npi
+import numpy as np
+
+arr1 = np.array([[1, 2, 3], [4, 5, 6]])
+arr2 = np.random.random((2, 3))
+
+sess = npi.NumpyAISession([arr1, arr2])
+diag = npi.Diagnosis(sess)
+print(diag.steps(task="Tell me the exact and pithy steps to analyse and select which ML model to use for this data. There should be no more than 7 steps"))
 ```
 
 ### Supported LLM Vendors
