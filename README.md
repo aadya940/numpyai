@@ -31,7 +31,9 @@ pip install numpyai
 Clone the project then:
 
 ```sh
-cd numpyai/; pip install -r requirements.txt ; pip install .
+cd numpyai/
+pip install -r requirements.txt
+pip install .
 ```
 
 
