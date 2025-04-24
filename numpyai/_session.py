@@ -15,6 +15,7 @@ from ._validator import NumpyValidator
 
 import sklearn
 import matplotlib.pyplot as plt
+import warnings
 
 # Initialize rich console
 console = Console()
@@ -71,7 +72,7 @@ class NumpyAISession:
                 "metadata": self._metadata_collector.metadata(arr),
             }
 
-    def validate_output(self, query: str, output: Any, error=None) -> bool:
+    def validate_output(self, query: str, output: Any, explainer, error=None) -> bool:
         """Validates the output of a NumPy operation."""
         input_metadata = {
             name: info["metadata"] for name, info in self._context.items()
@@ -79,7 +80,7 @@ class NumpyAISession:
         output_metadata = self._metadata_collector.collect_output_metadata(output)
 
         validation_prompt = self._validator.generate_validation_prompt_multiple(
-            query, input_metadata, output_metadata, error=error
+            query, input_metadata, output_metadata, explainer, error=error
         )
         validation_code = self._code_generator.generate_response(validation_prompt)
         validation_code = self._clean_code(validation_code)
@@ -90,7 +91,7 @@ class NumpyAISession:
             console.print(Panel(syntax, title="Validation Code", border_style="blue"))
 
         # Execute the validation code
-        validation_result = self.execute_numpy_code(validation_code, code_out=output)
+        validation_result, _ = self.execute_numpy_code(validation_code, code_out=output)
 
         if self.verbose:
             console.print(
@@ -142,7 +143,7 @@ class NumpyAISession:
                 self.current_prompt = query
                 code = self.generate_numpy_code(query, self._context)
 
-                result = self.execute_numpy_code(code)
+                result, explainer = self.execute_numpy_code(code)
 
                 if result is None:
                     error_messages.append(
@@ -158,7 +159,9 @@ class NumpyAISession:
 
                     continue
 
-                if self.validate_output(query, result, error=error_messages[-1]):
+                if self.validate_output(
+                    query, result, explainer, error=error_messages[-1]
+                ):
                     if self.verbose or (attempt == self.MAX_TRIES):
                         console.print(
                             Panel(
@@ -183,7 +186,9 @@ class NumpyAISession:
 
         # Print error details before raising the final exception
         self._print_error_table(error_messages)
-        raise NumpyAIError(f"Validation failed after {self.MAX_TRIES} attempts.")
+        warnings.warn(
+            f"Validation failed after {self.MAX_TRIES} attempts. Please check the validity of the code."
+        )
 
     def assert_is_code(self, llm_response: str) -> str:
         """Ensure LLM response is valid Python/NumPy code."""
@@ -249,6 +254,7 @@ class NumpyAISession:
             }
             exec(code, exec_globals, local_vars)  # Execute code in controlled scope
             result = local_vars.get("output", None)
+            explainer = local_vars.get("metadata", None)
 
             if result is not None:
                 # Show only first 10 lines of output
@@ -259,7 +265,10 @@ class NumpyAISession:
 
                 if self.verbose:
                     console.print(preview)
-                return result
+
+                if self.verbose:
+                    console.print(explainer)
+                return result, explainer
 
             return None
 

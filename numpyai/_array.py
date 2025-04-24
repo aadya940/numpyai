@@ -9,6 +9,7 @@ import numpy as np
 from operator import add, sub, mul, truediv, floordiv, mod, pow, matmul
 import matplotlib.pyplot as plt
 import sklearn
+import warnings
 
 import re
 from typing import Any, Dict, List, Optional, Union, Tuple
@@ -173,7 +174,8 @@ class array:
 
                 if self.verbose or attempt == self.MAX_TRIES:
                     console.print("[bold]Executing generated code...[/bold]")
-                _res = self.execute_numpy_code(_code, self._data)
+                _res, explainer = self.execute_numpy_code(_code, self._data)
+
                 if _res is None:
                     error_messages.append(
                         f"Try {attempt}: Code execution returned None"
@@ -190,7 +192,7 @@ class array:
                 _test_code = clean_code(
                     self._code_generator.generate_response(
                         self._validator.generate_validation_prompt(
-                            query, self.metadata, self._output_metadata
+                            query, self.metadata, self._output_metadata, explainer
                         )
                     )
                 )
@@ -221,8 +223,8 @@ class array:
                     )
 
         self._print_error_table(error_messages)
-        raise NumpyAIError(
-            f"[bold red]Failed after {self.MAX_TRIES} attempts.[/bold red]"
+        warnings.warn(
+            f"Validation failed after {self.MAX_TRIES} attempts. Please check the validity of the code."
         )
 
     def _is_valid_test_response(self, response):
@@ -274,7 +276,7 @@ class array:
         error_messages = []
 
         while tries < self.MAX_TRIES:
-            code = clean_code(r"```(\w+)?", "", llm_response)
+            code = clean_code(llm_response)
             try:
                 if self._validator.validate_code(code):
                     return code
@@ -322,11 +324,16 @@ class array:
 
             # Execute the code block
             exec(code, {"__builtins__": __builtins__}, local_vars)
-            result = local_vars.get("output")
+            result = local_vars.get("output", None)
+            explainer = local_vars.get("metadata", None)
 
             if result is not None and self.verbose:
                 console.print("\n".join(str(result).split("\n")[:10]))
-            return result
+
+            if explainer is not None and self.verbose:
+                console.print("\n".join(str(explainer).split("\n")))
+
+            return result, explainer
 
         except Exception as e:
             if self.verbose:

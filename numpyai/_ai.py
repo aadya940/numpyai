@@ -108,6 +108,8 @@ class NumpyCodeGen:
         7. Ensure data is properly cleaned before executing any code.
         8. As the very last option, if needed only, use sklearn (already imported as `sklearn`), matplotlib.pyplot (already imported as `plt`). 
         DO NOT USE IT IF NOT NECESSARY.
+        9. There should always be exactly one variable named "metadata" which contains explains
+        the details and structure of the variable "output" through a string.
         
         The array has these properties:
         {metadata}
@@ -115,9 +117,13 @@ class NumpyCodeGen:
         CORRECT EXAMPLES:
         # Replace NaN values with zero
         arr[np.isnan(arr)] = 0
+        output = arr
+        metadata = "The variable output is a numpy vector arr with NaNs imputed with the value 0"
         
         # Calculate mean of array
         result = np.mean(arr)
+        output = result
+        metadata = "The variable output contains the mean of arr and is a numpy scalar"
         
         INCORRECT EXAMPLES (DO NOT DO THIS):
         # DON'T create a new array
@@ -171,17 +177,22 @@ class NumpyCodeGen:
         7. Beautifully Print what is important so the code is explainable and the users understand the output.
         8. As the very last option, if needed only, use sklearn (already imported as `sklearn`), matplotlib.pyplot (already imported as `plt`). 
         DO NOT USE IT IF NOT NECESSARY.
+        9. There should always be exactly one variable named "metadata" which contains explains
+        the details and structure of the variable "output" through a string.
 
+        
         **Array Information:**
         {array_descriptions}
 
         CORRECT EXAMPLES:
         # Compute the mean of arr1
         output = np.mean(arr1)
+        metadata = "The variable output is a numpy scalar containing the mean of the array 1"
 
         # Fill NaN values in arr2 with the mean of arr1
         arr2[np.isnan(arr2)] = np.mean(arr1)
         output = arr2
+        metadata = "The variable output is a numpy array arr2 with NaNs imputed with the mean of the numpy array arr1" 
 
         INCORRECT EXAMPLES (DO NOT DO THIS):
         # DON'T create new arrays from scratch
