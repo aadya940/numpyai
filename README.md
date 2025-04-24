@@ -10,12 +10,14 @@ A Natural Language Interface for [NumPy](https://github.com/numpy/numpy) powered
 NumpyAI enables seamless interaction with NumPy using natural language queries, making numerical computing more intuitive and efficient.
 
 #### Key Features:
-- **Natural Language Processing**: Convert plain language instructions into executable NumPy code.
-- **Validation & Safety**: Automatically validates and tests generated code for correctness and security. We will tell you we failed if we think the outputs might not be correct (don't pass the validation tests).
-- **Transparency**: Logs all generated code and applies checks to ensure accuracy before execution.
-- **Control**: We don't allow AI to reassign or change the internal arrays passed to `numpyai.array` or `numpyai.NumpyAISession`. We believe they need to be intentional decisions by the user.
-- Support for additional LLM providers (OpenAI, Anthropic, etc.)
-- Interactive debugging and visualization tools
+- Writes NumPy code for you based on your natural language queries.
+- Know what data-analysis steps to apply on your data using `numpyai.Diagnosis`.
+- Talk to multiple arrays using `numpyai.NumpyAISession`.
+- Checks the validity of the generated code.
+- Unit tests the code before returning the final-output.
+- Full transparency, know what code was executed by the LLM using the `verbose=True` flag.
+- Supports frameworks like `sklearn` and `matplotlib` for basic tasks.
+- Interactive debugging and re-tries.
 
 
 ### Installation
