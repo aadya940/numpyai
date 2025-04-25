@@ -208,7 +208,7 @@ class array:
                         )
                     )
 
-                _test_response = self.execute_numpy_code(
+                _test_response, _ = self.execute_numpy_code(
                     _test_code, {"arr": self._data, "code_out": _res}
                 )
                 if self._is_valid_test_response(_test_response):
