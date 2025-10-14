@@ -59,7 +59,7 @@ import numpy as np
 # Ensure GOOGLE_API_KEY environment variable is set.
 
 # Create an array instance
-data = [[1, 2, 3, 4, 5, np.nan], [np.nan, 3, 5, 3.1415, 2, 2]]
+data = np.array([[1, 2, 3, 4, 5, np.nan], [np.nan, 3, 5, 3.1415, 2, 2]])
 arr = npi.array(data)
 
 # Query NumPyAI with natural language
