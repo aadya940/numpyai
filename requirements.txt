@@ -1,7 +1,0 @@
-numpy
-google-generativeai
-rich
-matplotlib
-scikit-learn
-openai
-anthropic

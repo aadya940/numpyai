@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "numpyai"
+version = "0.4.0"
+description = "A natural language interface for NumPy, powered by LLMs."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Aadya Chinubhai", email = "aadyachinubhai@gmail.com" }]
+requires-python = ">=3.11"
+keywords = ["numpy", "llm", "ai", "data-analysis", "natural-language"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+dependencies = [
+    "numpy>=1.26",
+    "rich>=13.7",
+    "pydantic>=2.6",
+    "pydantic-ai>=0.0.13",
+]
+
+[project.optional-dependencies]
+google = ["pydantic-ai-slim[google]>=0.0.13"]
+openai = ["pydantic-ai-slim[openai]>=0.0.13"]
+anthropic = ["pydantic-ai-slim[anthropic]>=0.0.13"]
+extras = ["matplotlib>=3.8", "scikit-learn>=1.4"]
+all = [
+    "pydantic-ai[all]>=0.0.13",
+    "matplotlib>=3.8",
+    "scikit-learn>=1.4",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "black>=24.0",
+    "ruff>=0.5",
+    "sphinx>=7.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/AadyaChinubhai/numpyai"
+Documentation = "https://numpyai.readthedocs.io"
+Issues = "https://github.com/AadyaChinubhai/numpyai/issues"
+
+[tool.setuptools.packages.find]
+include = ["numpyai*"]
+exclude = ["examples*", "source*", "tests*"]
+
+[tool.setuptools.package-data]
+numpyai = ["py.typed"]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"

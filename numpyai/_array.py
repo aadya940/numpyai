@@ -1,67 +1,68 @@
-# Import necessary libraries
+"""Single-array natural-language interface."""
+
+from __future__ import annotations
+
+import warnings
+from operator import add, floordiv, matmul, mod, mul, pow, sub, truediv
+from typing import Any
+
+import numpy as np
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
 from rich.syntax import Syntax
 from rich.table import Table
-from rich.text import Text
-from rich import box
-import numpy as np
-from operator import add, sub, mul, truediv, floordiv, mod, pow, matmul
-import matplotlib.pyplot as plt
-import sklearn
-import warnings
 
-import re
-from typing import Any, Dict, List, Optional, Union, Tuple
-
-from ._validator import NumpyValidator
-from ._ai import NumpyCodeGen
-from ._utils import NumpyMetadataCollector, clean_code
+from ._ai import DEFAULT_MODEL, CodeResponse, NumpyCodeGen
 from ._exceptions import NumpyAIError
+from ._utils import NumpyMetadataCollector, clean_code
+from ._validator import NumpyValidator
 
-# Initialize rich console
 console = Console()
-
-console.print(
-    "[yellow]Ensure your API KEY is set for your LLM as an environment variable.[/yellow]"
-)
 
 
 class array:
-    """A wrapper around `numpy.ndarray` providing AI-powered functionalities
-    and extended operations.
+    """A wrapper around ``numpy.ndarray`` with an AI-powered ``.chat()`` method.
 
-    Args:
-        data: numpy.ndarray
-            The data of the array class.
-        verbose: bool, default=True
-            If False, only show rich console outputs when the try is the last try,
-            successful, or fails in the last try.
-        provider_name (str):
-            LLM provider name ("google", "openai", or "claude").
-        model_name (Optional[str]):
-             Specific model name to use (defaults per provider).
+    Parameters
+    ----------
+    data:
+        The underlying NumPy array.
+    verbose:
+        If True, print every LLM step. If False, only print on the final attempt.
+    model:
+        Any model spec accepted by ``pydantic-ai`` (default:
+        ``"google:gemini-2.5-flash"``).
+    max_tries:
+        Number of code-generation attempts before giving up (default: 3).
     """
 
-    def __init__(self, data, verbose=False, provider_name="google", model_name=None):
-        assert isinstance(data, np.ndarray)
+    def __init__(
+        self,
+        data: np.ndarray,
+        *,
+        verbose: bool = False,
+        model: Any = DEFAULT_MODEL,
+        max_tries: int = 3,
+    ) -> None:
+        if not isinstance(data, np.ndarray):
+            raise TypeError(f"data must be a numpy.ndarray, got {type(data).__name__}")
+
         self._data = data
         self._metadata_collector = NumpyMetadataCollector()
         self._validator = NumpyValidator()
-        self._code_generator = NumpyCodeGen(
-            provider_name=provider_name, model_name=model_name
-        )
-        self.MAX_TRIES = 3
+        self._code_generator = NumpyCodeGen(model=model)
+        self.MAX_TRIES = max_tries
         self.verbose = verbose
 
-        self._output_metadata = {}
-
-        self.current_prompt = None
+        self._output_metadata: dict = {}
+        self.current_prompt: str | None = None
         self.metadata = self._metadata_collector.metadata(self._data)
+        self._model = model
 
-        self._cur_provider = provider_name
-        self._cur_model = model_name
-
+    # ------------------------------------------------------------------
+    # numpy interop
+    # ------------------------------------------------------------------
     def _apply_operator(self, other, op):
         other_data = other._data if isinstance(other, array) else other
         return array(op(self._data, other_data))
@@ -69,273 +70,192 @@ class array:
     def _apply_r_operator(self, other, op):
         return array(op(other, self._data))
 
-    def __add__(self, other):
-        return self._apply_operator(other, add)
+    def __add__(self, other): return self._apply_operator(other, add)
+    def __sub__(self, other): return self._apply_operator(other, sub)
+    def __mul__(self, other): return self._apply_operator(other, mul)
+    def __truediv__(self, other): return self._apply_operator(other, truediv)
+    def __floordiv__(self, other): return self._apply_operator(other, floordiv)
+    def __mod__(self, other): return self._apply_operator(other, mod)
+    def __pow__(self, other): return self._apply_operator(other, pow)
+    def __matmul__(self, other): return self._apply_operator(other, matmul)
 
-    def __sub__(self, other):
-        return self._apply_operator(other, sub)
-
-    def __mul__(self, other):
-        return self._apply_operator(other, mul)
-
-    def __truediv__(self, other):
-        return self._apply_operator(other, truediv)
-
-    def __floordiv__(self, other):
-        return self._apply_operator(other, floordiv)
-
-    def __mod__(self, other):
-        return self._apply_operator(other, mod)
-
-    def __pow__(self, other):
-        return self._apply_operator(other, pow)
-
-    def __matmul__(self, other):
-        return self._apply_operator(other, matmul)
-
-    def __radd__(self, other):
-        return self._apply_r_operator(other, add)
-
-    def __rsub__(self, other):
-        return self._apply_r_operator(other, sub)
-
-    def __rmul__(self, other):
-        return self._apply_r_operator(other, mul)
-
-    def __rtruediv__(self, other):
-        return self._apply_r_operator(other, truediv)
-
-    def __rfloordiv__(self, other):
-        return self._apply_r_operator(other, floordiv)
-
-    def __rmod__(self, other):
-        return self._apply_r_operator(other, mod)
-
-    def __rpow__(self, other):
-        return self._apply_r_operator(other, pow)
-
-    def __rmatmul__(self, other):
-        return self._apply_r_operator(other, matmul)
+    def __radd__(self, other): return self._apply_r_operator(other, add)
+    def __rsub__(self, other): return self._apply_r_operator(other, sub)
+    def __rmul__(self, other): return self._apply_r_operator(other, mul)
+    def __rtruediv__(self, other): return self._apply_r_operator(other, truediv)
+    def __rfloordiv__(self, other): return self._apply_r_operator(other, floordiv)
+    def __rmod__(self, other): return self._apply_r_operator(other, mod)
+    def __rpow__(self, other): return self._apply_r_operator(other, pow)
+    def __rmatmul__(self, other): return self._apply_r_operator(other, matmul)
 
     def __getitem__(self, index):
-        result = self._data[index]
-        return array(result)
+        return array(self._data[index])
 
-    def __setitem__(self, index, value):
+    def __setitem__(self, index, value) -> None:
         self._data[index] = value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"numpyai.array(shape={self._data.shape}, dtype={self._data.dtype})"
 
     def __getattr__(self, name):
-        """Implements numpy methods using method forwarding."""
         attr = getattr(self._data, name)
         if callable(attr):
-            # Wrap it in a function to allow forwarding kwargs
             def method_proxy(*args, **kwargs):
                 result = attr(*args, **kwargs)
-                if isinstance(result, np.ndarray):
-                    return array(result)
-                return result
-
+                return array(result) if isinstance(result, np.ndarray) else result
             return method_proxy
-        return attr  # Return as-is if it's not callable
+        return attr
 
-    # Utility methods
     @property
-    def data(self):
+    def data(self) -> np.ndarray:
         return self._data
 
     @data.setter
-    def data(self, new_array):
+    def data(self, new_array: np.ndarray) -> None:
         self._data = new_array
         self.metadata = self._metadata_collector.metadata(self._data)
 
-    def chat(self, query):
-        """Handles user queries by generating and executing NumPy code."""
-        assert isinstance(query, str)
-        console.print(
-            Panel(f"[bold cyan]Query:[/bold cyan] {query}", border_style="blue")
-        )
+    # ------------------------------------------------------------------
+    # chat
+    # ------------------------------------------------------------------
+    def chat(self, query: str) -> Any:
+        """Handle a natural-language query by generating and executing NumPy code."""
+        if not isinstance(query, str):
+            raise TypeError("query must be a string")
 
-        error_messages = []
+        console.print(Panel(f"[bold cyan]Query:[/bold cyan] {query}", border_style="blue"))
+
+        error_messages: list[str] = []
+        prior_feedback: str | None = None
         for attempt in range(1, self.MAX_TRIES + 1):
-            # Only display attempt messages if verbose or last attempt
-            if self.verbose or attempt == self.MAX_TRIES:
-                console.print(
-                    f"[bold green]Attempt {attempt}/{self.MAX_TRIES}...[/bold green]"
-                )
+            is_last = attempt == self.MAX_TRIES
+            if self.verbose or is_last:
+                console.print(f"[bold green]Attempt {attempt}/{self.MAX_TRIES}...[/bold green]")
             self.current_prompt = query
 
             try:
-                _code = self.generate_numpy_code(query, attempt)
-                if not isinstance(_code, str):
-                    continue
-
-                if self.verbose or attempt == self.MAX_TRIES:
+                response = self._generate_response(query, attempt, prior_feedback)
+                if self.verbose or is_last:
                     console.print("[bold]Executing generated code...[/bold]")
-                _res, explainer = self.execute_numpy_code(_code, self._data)
+                result, explainer = self._execute(response.code, self._data)
 
-                if _res is None:
-                    error_messages.append(
-                        f"Try {attempt}: Code execution returned None"
-                    )
-                    if self.verbose or attempt == self.MAX_TRIES:
-                        console.print(
-                            f"[bold red]✗[/bold red] Attempt {attempt} failed: Code execution returned None"
-                        )
+                if result is None:
+                    error_messages.append(f"Try {attempt}: Code execution returned None")
+                    prior_feedback = "code execution produced no `output` variable"
+                    if self.verbose or is_last:
+                        console.print(f"[bold red]✗[/bold red] Attempt {attempt} failed: execution returned None")
                     continue
 
-                self._output_metadata = (
-                    self._metadata_collector.collect_output_metadata(_res)
-                )
-                _test_code = clean_code(
-                    self._code_generator.generate_response(
-                        self._validator.generate_validation_prompt(
-                            query, self.metadata, self._output_metadata, explainer
-                        )
-                    )
-                )
+                self._output_metadata = self._metadata_collector.collect_output_metadata(result)
 
-                if self.verbose or attempt == self.MAX_TRIES:
-                    console.print(
-                        Panel(
-                            Syntax(
-                                _test_code, "python", theme="monokai", line_numbers=True
-                            ),
-                            title="[bold]Validation Code[/bold]",
-                            border_style="green",
-                        )
-                    )
-
-                _test_response, _ = self.execute_numpy_code(
-                    _test_code, {"arr": self._data, "code_out": _res}
+                judgment = self._code_generator.judge(
+                    query=query, code=response.code, metadata=str(explainer or "")
                 )
-                if self._is_valid_test_response(_test_response):
-                    console.print("[bold green]✓[/bold green] Validation successful!")
-                    return _res
+                if self.verbose or is_last:
+                    self._print_judgment(judgment)
+
+                if judgment.interprets_query_correctly:
+                    console.print("[bold green]✓[/bold green] Judgment passed!")
+                    return result
+
+                prior_feedback = f"judgment rejected: {judgment.reason}"
+                error_messages.append(f"Try {attempt}: {prior_feedback}")
 
             except Exception as e:
-                error_messages.append(f"Try {attempt}: {str(e)}")
-                if self.verbose or attempt == self.MAX_TRIES:
-                    console.print(
-                        f"[bold red]✗[/bold red] Attempt {attempt} failed: {str(e)}"
-                    )
+                error_messages.append(f"Try {attempt}: {e}")
+                prior_feedback = f"exception in previous attempt: {e}"
+                if self.verbose or is_last:
+                    console.print(f"[bold red]✗[/bold red] Attempt {attempt} failed: {e}")
 
         self._print_error_table(error_messages)
         warnings.warn(
-            f"Validation failed after {self.MAX_TRIES} attempts. Please check the validity of the code."
+            f"Validation failed after {self.MAX_TRIES} attempts. Please check the validity of the code.",
+            stacklevel=2,
         )
+        return None
 
-    def _is_valid_test_response(self, response):
-        """Validates the test response based on type and boolean evaluation."""
-        if isinstance(response, bool):
-            return response
-        if isinstance(response, np.ndarray):
-            return response.size == 1 and bool(response.item()) or response.all()
-        try:
-            return bool(response)
-        except (ValueError, TypeError):
-            return False
-
-    def _print_error_table(self, error_messages):
-        """Displays an error summary table."""
-        error_table = Table(title="Error Details", box=box.DOUBLE_EDGE)
-        error_table.add_column("Attempt", style="cyan")
-        error_table.add_column("Error", style="red")
-
+    # ------------------------------------------------------------------
+    # helpers
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _print_error_table(error_messages: list[str]) -> None:
+        table = Table(title="Error Details", box=box.DOUBLE_EDGE)
+        table.add_column("Attempt", style="cyan")
+        table.add_column("Error", style="red")
         for i, msg in enumerate(error_messages, 1):
-            error_table.add_row(str(i), msg)
+            table.add_row(str(i), msg)
+        console.print(table)
 
-        console.print(error_table)
+    @staticmethod
+    def _print_judgment(j) -> None:
+        mark = "[green]✓[/green]" if j.interprets_query_correctly else "[red]✗[/red]"
+        body = j.reason or "correctly interprets the query"
+        console.print(Panel(f"{mark} {body}", title="Judgment", border_style="magenta"))
 
-    def generate_numpy_code(self, query, attempt=1):
-        """Generate valid NumPy code from the query."""
-        pr = self._code_generator.generate_llm_prompt(
-            query=query, metadata=self.metadata
+    def _generate_response(
+        self,
+        query: str,
+        attempt: int,
+        prior_feedback: str | None = None,
+    ) -> CodeResponse:
+        prompt = self._code_generator.prompt_single(
+            query=query, metadata=self.metadata, prior_feedback=prior_feedback
         )
-        llm_res = self._code_generator.generate_response(pr)
+        response = self._code_generator.generate_code(prompt)
+        response = CodeResponse(
+            code=clean_code(response.code),
+            explanation=response.explanation,
+        )
 
-        # Only display the code panel if verbose or last attempt
         if self.verbose or attempt == self.MAX_TRIES:
-            syntax = Syntax(llm_res, "python", theme="monokai", line_numbers=True)
             console.print(
-                Panel(syntax, title="[bold]Generated Code[/bold]", border_style="blue")
+                Panel(
+                    Syntax(response.code, "python", theme="monokai", line_numbers=True),
+                    title="[bold]Generated Code[/bold]",
+                    border_style="blue",
+                )
             )
 
-        return self.assert_is_code(llm_res, attempt)
+        if not self._validator.validate_code(response.code):
+            raise NumpyAIError("Generated code failed syntax validation")
+        return response
 
-    def assert_is_code(self, llm_response, attempt=1):
-        """Ensure LLM response is valid Python/NumPy code."""
-        if not isinstance(llm_response, str):
-            if self.verbose or attempt == self.MAX_TRIES:
-                console.print("[bold red]✗[/bold red] LLM response is not a string")
-            raise ValueError("LLM response is not a string")
+    def _execute(self, code: str, args) -> tuple[Any, Any]:
+        """Execute generated code in a controlled namespace.
 
-        tries = 0
-        error_messages = []
-
-        while tries < self.MAX_TRIES:
-            code = clean_code(llm_response)
-            try:
-                if self._validator.validate_code(code):
-                    return code
-            except SyntaxError as e:
-                error_messages.append(f"Syntax error: {str(e)}")
-                tries += 1
-                if self.verbose or tries == self.MAX_TRIES:
-                    console.print(f"[bold red]✗[/bold red] Syntax error: {str(e)}")
-                    console.print("[yellow]Regenerating code...[/yellow]")
-                llm_response = self._code_generator.generate_response(
-                    self.current_prompt
-                )
-                continue
-
-            tries += 1
-
-        # Always show the error table at the end of all attempts
-        error_table = Table(title="Code Validation Errors", box=box.SIMPLE)
-        error_table.add_column("Attempt", style="cyan")
-        error_table.add_column("Error", style="red")
-
-        for i, msg in enumerate(error_messages):
-            error_table.add_row(f"{i+1}", msg)
-
-        console.print(error_table)
-
-        raise NumpyAIError(
-            f"[bold red]Error generating valid code after {self.MAX_TRIES} attempts.[/bold red]"
-        )
-
-    def execute_numpy_code(self, code, args):
-        """Execute the generated code safely.
-
-        Args:
-            code: The code to execute
-            args: Either the array itself or a dict containing variables for execution
+        Returns ``(result, explainer)``. On error, returns ``(None, None)``.
         """
         try:
-            local_vars = {"np": np, "plt": plt, "sklearn": sklearn}
+            local_vars: dict[str, Any] = {"np": np}
+            try:
+                import matplotlib.pyplot as plt  # noqa: F401
+                local_vars["plt"] = plt
+            except ImportError:
+                pass
+            try:
+                import sklearn  # noqa: F401
+                local_vars["sklearn"] = sklearn
+            except ImportError:
+                pass
 
             if isinstance(args, dict):
                 local_vars.update(args)
             else:
                 local_vars["arr"] = args
 
-            # Execute the code block
             exec(code, {"__builtins__": __builtins__}, local_vars)
-            result = local_vars.get("output", None)
-            explainer = local_vars.get("metadata", None)
+            result = local_vars.get("output")
+            explainer = local_vars.get("metadata")
 
-            if result is not None and self.verbose:
-                console.print("\n".join(str(result).split("\n")[:10]))
-
-            if explainer is not None and self.verbose:
-                console.print("\n".join(str(explainer).split("\n")))
+            if self.verbose:
+                if result is not None:
+                    console.print("\n".join(str(result).split("\n")[:10]))
+                if explainer is not None:
+                    console.print(str(explainer))
 
             return result, explainer
 
         except Exception as e:
             if self.verbose:
-                console.print(f"[bold red]✗[/bold red] Error executing code: {str(e)}")
-            return None
+                console.print(f"[bold red]✗[/bold red] Error executing code: {e}")
+            return None, None

@@ -1,105 +1,124 @@
 <p align="center">
-<img src="https://github.com/user-attachments/assets/7d6244d2-2a94-42c7-99e1-ba2953c21781" alt="logo" width="500">
+<img src="logo.png" alt="NumpyAI logo" width="500">
 </p>
 
+# NumpyAI
 
-### NumpyAI
-A Natural Language Interface for [NumPy](https://github.com/numpy/numpy) powered by LLMs. Empowering mindful data analysis using Generative AI.
+A natural-language interface for [NumPy](https://github.com/numpy/numpy), powered by LLMs.
 
-### About NumpyAI
-NumpyAI enables seamless interaction with NumPy using natural language queries, making numerical computing more intuitive and efficient.
+NumpyAI lets you interact with NumPy arrays using plain English. It ships as a small,
+provider-agnostic library built on top of [Pydantic AI](https://ai.pydantic.dev/) - so
+you can plug in Google Gemini, OpenAI, Anthropic, or any other model Pydantic AI supports
+without touching the library code.
 
-#### Key Features:
-- Writes NumPy code for you based on your natural language queries.
-- Know what data-analysis steps to apply on your data using `numpyai.Diagnosis`.
-- Talk to multiple arrays using `numpyai.NumpyAISession`.
-- Checks the validity of the generated code.
-- Unit tests the code before returning the final-output.
-- Full transparency, know what code was executed by the LLM using the `verbose=True` flag.
-- Supports frameworks like `sklearn` and `matplotlib` for basic tasks.
-- Interactive debugging and re-tries.
-- NumPy compatible.
+## Features
 
+- Ask questions in English; NumpyAI generates and executes NumPy code for you.
+- `numpyai.Diagnosis` suggests analysis steps for your data.
+- `numpyai.NumpyAISession` chats over multiple arrays at once.
+- Generated code is syntax-checked and independently validated before returning.
+- Automatic retries with error context.
+- Verbose mode (`verbose=True`) prints every intermediate step.
+- Provider-agnostic - any Pydantic AI model spec works.
 
-### Installation
-```sh
-pip install numpyai
-```
-
-### Installation from Source
-
-Clone the project then:
+## Installation
 
 ```sh
-cd numpyai/
-pip install -r requirements.txt
-pip install .
+pip install "numpyai[all]"
 ```
 
+Or install only the providers you need:
 
-### Setup
-
-Windows
 ```sh
-set GOOGLE_API_KEY=...
+pip install "numpyai[google]"    # Google Gemini
+pip install "numpyai[openai]"    # OpenAI
+pip install "numpyai[anthropic]" # Anthropic Claude
 ```
 
-Linux
+### From source
+
 ```sh
-export GOOGLE_API_KEY=...
+git clone https://github.com/AadyaChinubhai/numpyai
+cd numpyai
+pip install -e ".[all,dev]"
 ```
 
-### Usage Example
+## Setup
 
-#### Single Array
+Set the API key for your chosen provider. Pydantic AI reads standard env vars:
+
+| Provider  | Environment variable  |
+| --------- | --------------------- |
+| Google    | `GEMINI_API_KEY`      |
+| OpenAI    | `OPENAI_API_KEY`      |
+| Anthropic | `ANTHROPIC_API_KEY`   |
+
+```sh
+export GEMINI_API_KEY=...
+```
+
+## Usage
+
+### Single array
+
 ```python
-import numpyai as npi
 import numpy as np
+import numpyai as npi
 
-# Ensure GOOGLE_API_KEY environment variable is set.
-
-# Create an array instance
 data = np.array([[1, 2, 3, 4, 5, np.nan], [np.nan, 3, 5, 3.1415, 2, 2]])
-arr = npi.array(data)
+arr = npi.array(data)  # defaults to google:gemini-2.5-flash
 
-# Query NumPyAI with natural language
-print(arr.chat("Compute the height and width of the image using NumPy."))  # Expected output: (2, 6)
+print(arr.chat("Compute the height and width of the image using NumPy."))
+# Expected output: (2, 6)
 ```
 
-#### Multiple Arrays
+### Choosing a model
+
+Pass any Pydantic AI model spec via `model=`:
+
 ```python
-import numpyai as npi
+npi.array(data, model="anthropic:claude-sonnet-4-5")
+npi.array(data, model="openai:gpt-4o")
+npi.array(data, model="google:gemini-2.5-pro")
+```
+
+You can also pass a pre-configured `pydantic_ai.models.Model` instance for full control.
+
+### Multiple arrays
+
+```python
 import numpy as np
+import numpyai as npi
 
 arr1 = np.array([[1, 2, 3], [4, 5, 6]])
 arr2 = np.random.random((2, 3))
 
 sess = npi.NumpyAISession([arr1, arr2])
-imputed_array = sess.chat("Impute the first array with the mean of the second array.")
+imputed = sess.chat("Impute the first array with the mean of the second array.")
 ```
 
-#### Diagnosis
+### Diagnosis
+
 ```python
-import numpyai as npi
-import numpy as np
-
-arr1 = np.array([[1, 2, 3], [4, 5, 6]])
-arr2 = np.random.random((2, 3))
-
 sess = npi.NumpyAISession([arr1, arr2])
 diag = npi.Diagnosis(sess)
-print(diag.steps(task="Tell me the exact and pithy steps to analyse and select which ML model to use for this data. There should be no more than 7 steps"))
+steps = diag.steps(
+    task="Give me exactly 7 pithy steps to select an ML model for this data."
+)
 ```
 
-### Supported LLM Vendors
-- Google Gemini
-- OpenAI
-- Anthropic
+## Supported LLM providers
 
-### Contributing Guidelines
-- Apply the `black` formatter.
-- The code should be well documented and be rendered in the docs.
-- For testing, add it in the `examples/all_functionality.ipynb` notebook.
-- Ensure backward compatibility.
+Anything Pydantic AI supports - Google (Gemini), OpenAI, Anthropic, Groq, Mistral,
+Ollama, and OpenAI-compatible endpoints. See the
+[Pydantic AI model docs](https://ai.pydantic.dev/models/) for the full list.
 
-Thank you and looking forward to seeing you contribute to NumpyAI :) !
+## Contributing
+
+- Format with `black` and lint with `ruff`.
+- Add tests under `tests/`.
+- Public API surface (`array`, `NumpyAISession`, `Diagnosis`) should stay stable.
+
+## License
+
+MIT - see [LICENSE](LICENSE).
