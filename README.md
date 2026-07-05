@@ -38,7 +38,7 @@ pip install "numpyai[anthropic]" # Anthropic Claude
 ### From source
 
 ```sh
-git clone https://github.com/AadyaChinubhai/numpyai
+git clone https://github.com/aadya940/numpyai
 cd numpyai
 pip install -e ".[all,dev]"
 ```
