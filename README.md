@@ -2,7 +2,7 @@
 <img src="logo.png" alt="NumpyAI logo" width="500">
 </p>
 
-# NumpyAI
+# NumPyAI
 
 A natural-language interface for [NumPy](https://github.com/numpy/numpy), powered by LLMs.
 
