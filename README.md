@@ -11,6 +11,8 @@ provider-agnostic library built on top of [Pydantic AI](https://ai.pydantic.dev/
 you can plug in Google Gemini, OpenAI, Anthropic, or any other model Pydantic AI supports
 without touching the library code.
 
+If you want real <b>Dashboarding</b> capabilities, checkout the (numpyai-dashboard)[https://github.com/aadya940/numpyai-dashboard] project.
+
 ## Features
 
 - Ask questions in English; NumpyAI generates and executes NumPy code for you.
